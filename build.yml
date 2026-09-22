@@ -23,52 +23,87 @@ jobs:
       run: |
         echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
-        # Automatically accept SDK licenses
         mkdir -p "${ANDROID_HOME:-/usr/local/lib/android/sdk}/licenses" || true
         printf "\n24333f8a63b1d939edd0742293c0b2d73850d089\n84831b9409646a3e80e4b2ebeb832144f08d5193\nd56f5187479451eabf01fb78af6dfcb131a6481e\n2faWindowsLicenses\n" > "${ANDROID_HOME:-/usr/local/lib/android/sdk}/licenses/android-sdk-license" 2>/dev/null || true
         yes | sdkmanager --licenses 2>/dev/null || true
 
-    - name: Install Gradle 9.6.1
+    - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
-        gradle-version: '9.6.1'
+        gradle-version: '9.3.1'
 
-    - name: Create project folders
+    - name: Assemble Project Directory
       run: |
         mkdir -p project/app/src/main/java/com/example
-        mkdir -p project/app/src/main/java/com/myapp
         mkdir -p project/app/src/main/res/layout
         mkdir -p project/app/src/main/res/values
         mkdir -p project/app/src/main/res/drawable
         mkdir -p project/app/src/main/res/mipmap-anydpi-v26
         mkdir -p project/app/src/main/assets
+        mkdir -p project/gradle
 
-    - name: Copy Manifest
-      run: |
-        if [ -f AndroidManifest.xml ]; then
-          cp AndroidManifest.xml project/app/src/main/AndroidManifest.xml
-        elif [ -f app/src/main/AndroidManifest.xml ]; then
+        # Copy Gradle configuration & Version Catalog
+        if [ -d gradle ]; then
+          cp -r gradle/* project/gradle/ || true
+        fi
+        if [ -f gradle.properties ]; then
+          cp gradle.properties project/gradle.properties
+        fi
+        if [ -f build.gradle.kts ]; then
+          cp build.gradle.kts project/build.gradle.kts
+        elif [ -f build.gradle ]; then
+          cp build.gradle project/build.gradle
+        fi
+        if [ -f settings.gradle.kts ]; then
+          cp settings.gradle.kts project/settings.gradle.kts
+        elif [ -f settings.gradle ]; then
+          cp settings.gradle project/settings.gradle
+        fi
+
+        # Copy app-level build configuration
+        if [ -f app/build.gradle.kts ]; then
+          cp app/build.gradle.kts project/app/build.gradle.kts
+        elif [ -f app/build.gradle ]; then
+          cp app/build.gradle project/app/build.gradle
+        elif [ -f build.gradle ]; then
+          cp build.gradle project/app/build.gradle
+        fi
+
+        # Copy environment / secrets configs
+        if [ -f .env.example ]; then
+          cp .env.example project/.env.example
+          cp .env.example project/.env
+        elif [ -f .env ]; then
+          cp .env project/.env
+          cp .env project/.env.example
+        else
+          touch project/.env project/.env.example
+        fi
+
+        # Copy Keystores
+        if [ -f debug.keystore.base64 ]; then
+          base64 -d debug.keystore.base64 > project/debug.keystore || true
+        elif [ -f debug.keystore ]; then
+          cp debug.keystore project/debug.keystore
+        fi
+
+        # Copy Manifest
+        if [ -f app/src/main/AndroidManifest.xml ]; then
           cp app/src/main/AndroidManifest.xml project/app/src/main/AndroidManifest.xml
+        elif [ -f AndroidManifest.xml ]; then
+          cp AndroidManifest.xml project/app/src/main/AndroidManifest.xml
         fi
 
-    - name: Copy Kotlin files
-      run: |
-        # Copy root flat Kotlin files if present
+        # Copy Kotlin source files
+        if [ -d app/src/main/java ]; then
+          cp -r app/src/main/java/* project/app/src/main/java/ || true
+        fi
         find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; || true
-        # Copy recursive Kotlin files from source tree if present
-        if [ -d app/src/main/java ]; then
-          cp -r app/src/main/java/* project/app/src/main/java/
-        fi
 
-    - name: Copy Java files
-      run: |
+        # Copy Java source files
         find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
-        if [ -d app/src/main/java ]; then
-          find app/src/main/java -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
-        fi
 
-    - name: Copy Layout XMLs
-      run: |
+        # Copy Layout XMLs
         shopt -s nullglob
         for f in activity_*.xml fragment_*.xml item_*.xml \
                  view_*.xml layout_*.xml row_*.xml dialog_*.xml; do
@@ -77,10 +112,8 @@ jobs:
         if [ -d app/src/main/res/layout ]; then
           cp -r app/src/main/res/layout/* project/app/src/main/res/layout/ || true
         fi
-        true
 
-    - name: Copy Value XMLs
-      run: |
+        # Copy Value XMLs
         for f in strings.xml colors.xml styles.xml \
                  themes.xml dimens.xml attrs.xml; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/values/ || true
@@ -89,9 +122,7 @@ jobs:
           cp -r app/src/main/res/values/* project/app/src/main/res/values/ || true
         fi
 
-    - name: Copy Drawables, Icons and Assets
-      run: |
-        shopt -s nullglob
+        # Copy Drawables, Icons & Mipmaps
         for f in ic_launcher_*.xml ic_*.xml *.png *.jpg *.jpeg *.webp; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ || true
         done
@@ -105,69 +136,18 @@ jobs:
           cp -r app/src/main/res/mipmap-anydpi-v26/* project/app/src/main/res/mipmap-anydpi-v26/ || true
         fi
 
-    - name: Copy app build.gradle
-      run: |
-        if [ -f build.gradle ]; then
-          cp build.gradle project/app/build.gradle
-        elif [ -f app/build.gradle.kts ]; then
-          cp app/build.gradle.kts project/app/build.gradle.kts
-        fi
-
-    - name: Copy ProGuard rules
-      run: |
-        if [ -f proguard-rules.pro ]; then
-          cp proguard-rules.pro project/app/proguard-rules.pro
-        elif [ -f app/proguard-rules.pro ]; then
+        # Copy ProGuard rules
+        if [ -f app/proguard-rules.pro ]; then
           cp app/proguard-rules.pro project/app/proguard-rules.pro
+        elif [ -f proguard-rules.pro ]; then
+          cp proguard-rules.pro project/app/proguard-rules.pro
         fi
 
-    - name: Create root build.gradle
-      run: |
-        cat > project/build.gradle << 'EOF'
-        buildscript {
-            repositories { google(); mavenCentral() }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:9.0.1'
-                classpath 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.2.10'
-            }
-        }
-        allprojects {
-            repositories { google(); mavenCentral() }
-        }
-        EOF
-
-    - name: Create settings.gradle
-      run: |
-        cat > project/settings.gradle << 'EOF'
-        pluginManagement {
-            repositories {
-                google()
-                mavenCentral()
-                gradlePluginPortal()
-            }
-        }
-        dependencyResolutionManagement {
-            repositories {
-                google()
-                mavenCentral()
-            }
-        }
-        rootProject.name = "FileManager"
-        include ':app'
-        EOF
-
-    - name: Create gradle.properties
-      run: |
-        cat > project/gradle.properties << 'EOF'
-        android.useAndroidX=true
-        org.gradle.jvmargs=-Xmx2048m
-        EOF
-
-    - name: Build Debug APK + Unsigned Release APK
+    - name: Build Debug APK + Release APK
       run: |
         set -o pipefail
         cd project
-        gradle assembleDebug assembleRelease 2>&1 | tee build_log.txt
+        gradle assembleDebug assembleRelease --stacktrace 2>&1 | tee build_log.txt
 
     - name: Write error.md on failure
       if: failure()
@@ -176,7 +156,7 @@ jobs:
           echo '# Build Failed'
           echo
           echo '```'
-          tail -n 300 project/build_log.txt 2>/dev/null || echo 'No Gradle log captured - failure happened before the build step.'
+          tail -n 300 project/build_log.txt 2>/dev/null || echo 'No Gradle log captured.'
           echo '```'
         } > error.md
 
@@ -193,7 +173,7 @@ jobs:
         name: debug-apk
         path: project/app/build/outputs/apk/debug/*.apk
 
-    - name: Upload Unsigned Release APK
+    - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
         name: unsigned-apk

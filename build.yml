@@ -19,8 +19,14 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+    - name: Configure Android SDK
+      run: |
+        echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
+        # Automatically accept SDK licenses
+        mkdir -p "${ANDROID_HOME:-/usr/local/lib/android/sdk}/licenses" || true
+        printf "\n24333f8a63b1d939edd0742293c0b2d73850d089\n84831b9409646a3e80e4b2ebeb832144f08d5193\nd56f5187479451eabf01fb78af6dfcb131a6481e\n2faWindowsLicenses\n" > "${ANDROID_HOME:-/usr/local/lib/android/sdk}/licenses/android-sdk-license" 2>/dev/null || true
+        yes | sdkmanager --licenses 2>/dev/null || true
 
     - name: Install Gradle 9.6.1
       uses: gradle/actions/setup-gradle@v3

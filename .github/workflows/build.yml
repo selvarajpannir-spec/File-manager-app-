@@ -38,11 +38,20 @@ jobs:
         mkdir -p project/app/src/main/res/layout
         mkdir -p project/app/src/main/res/values
         mkdir -p project/app/src/main/res/drawable
+        mkdir -p project/app/src/main/res/xml
         mkdir -p project/app/src/main/res/mipmap-anydpi-v26
         mkdir -p project/app/src/main/assets
         mkdir -p project/gradle
 
-        # Copy Gradle configuration & Version Catalog
+        # 1. Copy complete resource trees first
+        if [ -d app/src/main/res ]; then
+          cp -r app/src/main/res/* project/app/src/main/res/ || true
+        fi
+        if [ -d res ]; then
+          cp -r res/* project/app/src/main/res/ || true
+        fi
+
+        # 2. Copy Gradle configuration & Version Catalog
         if [ -d gradle ]; then
           cp -r gradle/* project/gradle/ || true
         fi
@@ -60,7 +69,7 @@ jobs:
           cp settings.gradle project/settings.gradle
         fi
 
-        # Copy app-level build configuration
+        # 3. Copy app-level build configuration
         if [ -f app/build.gradle.kts ]; then
           cp app/build.gradle.kts project/app/build.gradle.kts
         elif [ -f app/build.gradle ]; then
@@ -69,7 +78,7 @@ jobs:
           cp build.gradle project/app/build.gradle
         fi
 
-        # Copy environment / secrets configs
+        # 4. Copy environment / secrets configs
         if [ -f .env.example ]; then
           cp .env.example project/.env.example
           cp .env.example project/.env
@@ -80,63 +89,57 @@ jobs:
           touch project/.env project/.env.example
         fi
 
-        # Copy Keystores
+        # 5. Copy Keystores
         if [ -f debug.keystore.base64 ]; then
           base64 -d debug.keystore.base64 > project/debug.keystore || true
         elif [ -f debug.keystore ]; then
           cp debug.keystore project/debug.keystore
         fi
 
-        # Copy Manifest
+        # 6. Copy Manifest
         if [ -f app/src/main/AndroidManifest.xml ]; then
           cp app/src/main/AndroidManifest.xml project/app/src/main/AndroidManifest.xml
         elif [ -f AndroidManifest.xml ]; then
           cp AndroidManifest.xml project/app/src/main/AndroidManifest.xml
         fi
 
-        # Copy Kotlin source files
+        # 7. Copy Kotlin & Java source files
         if [ -d app/src/main/java ]; then
           cp -r app/src/main/java/* project/app/src/main/java/ || true
         fi
         find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; || true
-
-        # Copy Java source files
         find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
 
-        # Copy Layout XMLs
+        # 8. Copy root Layout XMLs if present
         shopt -s nullglob
         for f in activity_*.xml fragment_*.xml item_*.xml \
                  view_*.xml layout_*.xml row_*.xml dialog_*.xml; do
           cp "$f" project/app/src/main/res/layout/
         done
-        if [ -d app/src/main/res/layout ]; then
-          cp -r app/src/main/res/layout/* project/app/src/main/res/layout/ || true
-        fi
 
-        # Copy Value XMLs
+        # 9. Copy root Value XMLs if present
         for f in strings.xml colors.xml styles.xml \
                  themes.xml dimens.xml attrs.xml; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/values/ || true
         done
-        if [ -d app/src/main/res/values ]; then
-          cp -r app/src/main/res/values/* project/app/src/main/res/values/ || true
+
+        # 10. Copy root XML configs if present
+        for f in backup_rules.xml data_extraction_rules.xml; do
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/xml/ || true
+        done
+        if [ -d xml ]; then
+          cp -r xml/* project/app/src/main/res/xml/ || true
         fi
 
-        # Copy Drawables, Icons & Mipmaps
+        # 11. Copy Drawables, Icons & Mipmaps
         for f in ic_launcher_*.xml ic_*.xml *.png *.jpg *.jpeg *.webp; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ || true
         done
         for f in ic_launcher.xml ic_launcher_round.xml; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/mipmap-anydpi-v26/ || true
         done
-        if [ -d app/src/main/res/drawable ]; then
-          cp -r app/src/main/res/drawable/* project/app/src/main/res/drawable/ || true
-        fi
-        if [ -d app/src/main/res/mipmap-anydpi-v26 ]; then
-          cp -r app/src/main/res/mipmap-anydpi-v26/* project/app/src/main/res/mipmap-anydpi-v26/ || true
-        fi
 
-        # Copy ProGuard rules
+        # 12. Copy ProGuard rules
         if [ -f app/proguard-rules.pro ]; then
           cp app/proguard-rules.pro project/app/proguard-rules.pro
         elif [ -f proguard-rules.pro ]; then

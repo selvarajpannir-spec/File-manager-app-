@@ -1,0 +1,194 @@
+name: Build Debug APK (Kotlin Test)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Gradle 9.6.1
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '9.6.1'
+
+    - name: Create project folders
+      run: |
+        mkdir -p project/app/src/main/java/com/example
+        mkdir -p project/app/src/main/java/com/myapp
+        mkdir -p project/app/src/main/res/layout
+        mkdir -p project/app/src/main/res/values
+        mkdir -p project/app/src/main/res/drawable
+        mkdir -p project/app/src/main/res/mipmap-anydpi-v26
+        mkdir -p project/app/src/main/assets
+
+    - name: Copy Manifest
+      run: |
+        if [ -f AndroidManifest.xml ]; then
+          cp AndroidManifest.xml project/app/src/main/AndroidManifest.xml
+        elif [ -f app/src/main/AndroidManifest.xml ]; then
+          cp app/src/main/AndroidManifest.xml project/app/src/main/AndroidManifest.xml
+        fi
+
+    - name: Copy Kotlin files
+      run: |
+        # Copy root flat Kotlin files if present
+        find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; || true
+        # Copy recursive Kotlin files from source tree if present
+        if [ -d app/src/main/java ]; then
+          cp -r app/src/main/java/* project/app/src/main/java/
+        fi
+
+    - name: Copy Java files
+      run: |
+        find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
+        if [ -d app/src/main/java ]; then
+          find app/src/main/java -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
+        fi
+
+    - name: Copy Layout XMLs
+      run: |
+        shopt -s nullglob
+        for f in activity_*.xml fragment_*.xml item_*.xml \
+                 view_*.xml layout_*.xml row_*.xml dialog_*.xml; do
+          cp "$f" project/app/src/main/res/layout/
+        done
+        if [ -d app/src/main/res/layout ]; then
+          cp -r app/src/main/res/layout/* project/app/src/main/res/layout/ || true
+        fi
+        true
+
+    - name: Copy Value XMLs
+      run: |
+        for f in strings.xml colors.xml styles.xml \
+                 themes.xml dimens.xml attrs.xml; do
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/values/ || true
+        done
+        if [ -d app/src/main/res/values ]; then
+          cp -r app/src/main/res/values/* project/app/src/main/res/values/ || true
+        fi
+
+    - name: Copy Drawables, Icons and Assets
+      run: |
+        shopt -s nullglob
+        for f in ic_launcher_*.xml ic_*.xml *.png *.jpg *.jpeg *.webp; do
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ || true
+        done
+        for f in ic_launcher.xml ic_launcher_round.xml; do
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/mipmap-anydpi-v26/ || true
+        done
+        if [ -d app/src/main/res/drawable ]; then
+          cp -r app/src/main/res/drawable/* project/app/src/main/res/drawable/ || true
+        fi
+        if [ -d app/src/main/res/mipmap-anydpi-v26 ]; then
+          cp -r app/src/main/res/mipmap-anydpi-v26/* project/app/src/main/res/mipmap-anydpi-v26/ || true
+        fi
+
+    - name: Copy app build.gradle
+      run: |
+        if [ -f build.gradle ]; then
+          cp build.gradle project/app/build.gradle
+        elif [ -f app/build.gradle.kts ]; then
+          cp app/build.gradle.kts project/app/build.gradle.kts
+        fi
+
+    - name: Copy ProGuard rules
+      run: |
+        if [ -f proguard-rules.pro ]; then
+          cp proguard-rules.pro project/app/proguard-rules.pro
+        elif [ -f app/proguard-rules.pro ]; then
+          cp app/proguard-rules.pro project/app/proguard-rules.pro
+        fi
+
+    - name: Create root build.gradle
+      run: |
+        cat > project/build.gradle << 'EOF'
+        buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:9.0.1'
+                classpath 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.2.10'
+            }
+        }
+        allprojects {
+            repositories { google(); mavenCentral() }
+        }
+        EOF
+
+    - name: Create settings.gradle
+      run: |
+        cat > project/settings.gradle << 'EOF'
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        rootProject.name = "FileManager"
+        include ':app'
+        EOF
+
+    - name: Create gradle.properties
+      run: |
+        cat > project/gradle.properties << 'EOF'
+        android.useAndroidX=true
+        org.gradle.jvmargs=-Xmx2048m
+        EOF
+
+    - name: Build Debug APK + Unsigned Release APK
+      run: |
+        set -o pipefail
+        cd project
+        gradle assembleDebug assembleRelease 2>&1 | tee build_log.txt
+
+    - name: Write error.md on failure
+      if: failure()
+      run: |
+        {
+          echo '# Build Failed'
+          echo
+          echo '```'
+          tail -n 300 project/build_log.txt 2>/dev/null || echo 'No Gradle log captured - failure happened before the build step.'
+          echo '```'
+        } > error.md
+
+    - name: Upload error log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: error-log
+        path: error.md
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk
+        path: project/app/build/outputs/apk/debug/*.apk
+
+    - name: Upload Unsigned Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-apk
+        path: project/app/build/outputs/apk/release/*.apk

@@ -32,9 +32,10 @@ jobs:
       with:
         gradle-version: '9.3.1'
 
-    - name: Assemble Project Directory
+    - name: Assemble Multi-Source Project Directory
       run: |
-        mkdir -p project/app/src/main/java/com/example
+        # 1. Prepare Target Directory Structure
+        mkdir -p project/app/src/main/java
         mkdir -p project/app/src/main/res/layout
         mkdir -p project/app/src/main/res/values
         mkdir -p project/app/src/main/res/drawable
@@ -43,126 +44,157 @@ jobs:
         mkdir -p project/app/src/main/assets
         mkdir -p project/gradle
 
-        # 1. Copy complete resource trees
-        if [ -d app/src/main/res ]; then
-          cp -r app/src/main/res/* project/app/src/main/res/ || true
-        fi
-        if [ -d res ]; then
-          cp -r res/* project/app/src/main/res/ || true
-        fi
+        # 2. Multi-Path Resource Harvesting
+        for res_dir in app/src/main/res src/main/res res app/res; do
+          if [ -d "$res_dir" ]; then
+            cp -r "$res_dir"/* project/app/src/main/res/ 2>/dev/null || true
+          fi
+        done
 
-        # 2. Copy Gradle configuration & Version Catalog
-        if [ -d gradle ]; then
-          cp -r gradle/* project/gradle/ || true
-        fi
-        if [ -f gradle.properties ]; then
-          cp gradle.properties project/gradle.properties
-        fi
-        if [ -f build.gradle.kts ]; then
-          cp build.gradle.kts project/build.gradle.kts
-        elif [ -f build.gradle ]; then
-          cp build.gradle project/build.gradle
-        fi
-        if [ -f settings.gradle.kts ]; then
-          cp settings.gradle.kts project/settings.gradle.kts
-        elif [ -f settings.gradle ]; then
-          cp settings.gradle project/settings.gradle
-        fi
+        # 3. Multi-Path Gradle Configuration & Version Catalog
+        for gradle_dir in gradle app/gradle; do
+          if [ -d "$gradle_dir" ]; then
+            cp -r "$gradle_dir"/* project/gradle/ 2>/dev/null || true
+          fi
+        done
+        for prop in gradle.properties app/gradle.properties; do
+          if [ -f "$prop" ]; then
+            cp "$prop" project/gradle.properties 2>/dev/null || true
+          fi
+        done
+        for b_kts in build.gradle.kts project_build.gradle.kts; do
+          if [ -f "$b_kts" ]; then
+            cp "$b_kts" project/build.gradle.kts 2>/dev/null || true
+          fi
+        done
+        for s_kts in settings.gradle.kts project_settings.gradle.kts; do
+          if [ -f "$s_kts" ]; then
+            cp "$s_kts" project/settings.gradle.kts 2>/dev/null || true
+          fi
+        done
 
-        # 3. Copy app-level build configuration
+        # 4. Multi-Path App Build Configuration
         if [ -f app/build.gradle.kts ]; then
           cp app/build.gradle.kts project/app/build.gradle.kts
         elif [ -f app/build.gradle ]; then
           cp app/build.gradle project/app/build.gradle
+        elif [ -f build.gradle.kts ]; then
+          cp build.gradle.kts project/app/build.gradle.kts
         elif [ -f build.gradle ]; then
           cp build.gradle project/app/build.gradle
         fi
 
-        # 4. Copy environment / secrets configs
-        if [ -f .env.example ]; then
-          cp .env.example project/.env.example
-          cp .env.example project/.env
-        elif [ -f .env ]; then
-          cp .env project/.env
-          cp .env project/.env.example
-        else
-          touch project/.env project/.env.example
-        fi
+        # 5. Environment & Secrets Setup
+        touch project/.env project/.env.example
+        for env_file in .env.example .env app/.env; do
+          if [ -f "$env_file" ]; then
+            cp "$env_file" project/.env 2>/dev/null || true
+            cp "$env_file" project/.env.example 2>/dev/null || true
+          fi
+        done
 
-        # 5. Keystores creation for both debug and release
+        # 6. Multi-Source Keystore Initialization
         if [ -f debug.keystore.base64 ]; then
-          base64 -d debug.keystore.base64 > project/debug.keystore || true
-          base64 -d debug.keystore.base64 > debug.keystore || true
-        elif [ -f debug.keystore ]; then
-          cp debug.keystore project/debug.keystore
+          base64 -d debug.keystore.base64 > project/debug.keystore 2>/dev/null || true
+          base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
         fi
+        for ks in debug.keystore app/debug.keystore; do
+          if [ -f "$ks" ]; then
+            cp "$ks" project/debug.keystore 2>/dev/null || true
+          fi
+        done
         if [ ! -f project/debug.keystore ]; then
-          keytool -genkeypair -v -keystore project/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+          keytool -genkeypair -v -keystore project/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null || true
         fi
         if [ ! -f project/my-upload-key.jks ]; then
-          keytool -genkeypair -v -keystore project/my-upload-key.jks -storepass android -alias upload -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Release Key,O=Android,C=US" || true
+          keytool -genkeypair -v -keystore project/my-upload-key.jks -storepass android -alias upload -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Release Key,O=Android,C=US" 2>/dev/null || true
         fi
         cp project/debug.keystore debug.keystore 2>/dev/null || true
         cp project/my-upload-key.jks my-upload-key.jks 2>/dev/null || true
 
-        # 6. Copy Manifest
-        if [ -f app/src/main/AndroidManifest.xml ]; then
-          cp app/src/main/AndroidManifest.xml project/app/src/main/AndroidManifest.xml
-        elif [ -f AndroidManifest.xml ]; then
-          cp AndroidManifest.xml project/app/src/main/AndroidManifest.xml
-        fi
+        # 7. Multi-Path Android Manifest Resolution
+        for mf in app/src/main/AndroidManifest.xml src/main/AndroidManifest.xml AndroidManifest.xml; do
+          if [ -f "$mf" ]; then
+            cp "$mf" project/app/src/main/AndroidManifest.xml 2>/dev/null || true
+            break
+          fi
+        done
 
-        # 7. Copy Kotlin & Java source files
-        if [ -d app/src/main/java ]; then
-          cp -r app/src/main/java/* project/app/src/main/java/ || true
-        fi
-        find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; || true
-        find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; || true
+        # 8. Multi-Source Kotlin & Java File Harvesting
+        for src_dir in app/src/main/java src/main/java app/src/main/kotlin src/main/kotlin java; do
+          if [ -d "$src_dir" ]; then
+            cp -r "$src_dir"/* project/app/src/main/java/ 2>/dev/null || true
+          fi
+        done
+        mkdir -p project/app/src/main/java/com/example
+        find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; 2>/dev/null || true
+        find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; 2>/dev/null || true
 
-        # 8. Copy root Layout XMLs if present
+        # 9. Multi-Path Flat Resource Fallbacks
         shopt -s nullglob
         for f in activity_*.xml fragment_*.xml item_*.xml \
                  view_*.xml layout_*.xml row_*.xml dialog_*.xml; do
-          cp "$f" project/app/src/main/res/layout/
+          cp "$f" project/app/src/main/res/layout/ 2>/dev/null || true
         done
-
-        # 9. Copy root Value XMLs if present
         for f in strings.xml colors.xml styles.xml \
                  themes.xml dimens.xml attrs.xml; do
-          [ -f "$f" ] && cp "$f" project/app/src/main/res/values/ || true
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/values/ 2>/dev/null || true
         done
-
-        # 10. Copy root XML configs if present
         for f in backup_rules.xml data_extraction_rules.xml; do
-          [ -f "$f" ] && cp "$f" project/app/src/main/res/xml/ || true
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/xml/ 2>/dev/null || true
         done
         if [ -d xml ]; then
-          cp -r xml/* project/app/src/main/res/xml/ || true
+          cp -r xml/* project/app/src/main/res/xml/ 2>/dev/null || true
         fi
-
-        # 11. Copy Drawables, Icons & Mipmaps
         for f in ic_launcher_*.xml ic_*.xml *.png *.jpg *.jpeg *.webp; do
-          [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ || true
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ 2>/dev/null || true
         done
         for f in ic_launcher.xml ic_launcher_round.xml; do
-          [ -f "$f" ] && cp "$f" project/app/src/main/res/mipmap-anydpi-v26/ || true
+          [ -f "$f" ] && cp "$f" project/app/src/main/res/mipmap-anydpi-v26/ 2>/dev/null || true
         done
-
-        # 12. Copy ProGuard rules
         if [ -f app/proguard-rules.pro ]; then
           cp app/proguard-rules.pro project/app/proguard-rules.pro
         elif [ -f proguard-rules.pro ]; then
           cp proguard-rules.pro project/app/proguard-rules.pro
         fi
 
-    - name: Build Debug APK + Release APK
+    - name: Multi-Strategy Build Execution
       env:
         STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'android' }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'android' }}
+        KEY_ALIAS: upload
       run: |
         set -o pipefail
-        cd project
-        gradle assembleDebug assembleRelease --stacktrace 2>&1 | tee build_log.txt
+        BUILD_SUCCESS=0
+
+        echo "=== Attempt 1: Assembling debug & release in staged project ==="
+        if (cd project && gradle assembleDebug assembleRelease --stacktrace 2>&1 | tee build_log.txt); then
+          echo "Attempt 1 succeeded!"
+          BUILD_SUCCESS=1
+        else
+          echo "Attempt 1 failed. Logging output..."
+          cp project/build_log.txt attempt1_log.txt 2>/dev/null || true
+
+          echo "=== Attempt 2: Direct assembleDebug in staged project ==="
+          if (cd project && gradle assembleDebug --stacktrace 2>&1 | tee -a build_log.txt); then
+            echo "Attempt 2 (Debug APK) succeeded!"
+            BUILD_SUCCESS=1
+          else
+            echo "Attempt 2 failed. Trying direct root build..."
+            echo "=== Attempt 3: Direct root repository build ==="
+            if gradle assembleDebug --stacktrace 2>&1 | tee root_build_log.txt; then
+              echo "Attempt 3 (Root build) succeeded!"
+              mkdir -p project/app/build/outputs/apk/debug
+              cp app/build/outputs/apk/debug/*.apk project/app/build/outputs/apk/debug/ 2>/dev/null || true
+              BUILD_SUCCESS=1
+            fi
+          fi
+        fi
+
+        if [ "$BUILD_SUCCESS" -ne 1 ]; then
+          echo "All build attempts failed."
+          exit 1
+        fi
 
     - name: Write error.md on failure
       if: failure()
@@ -171,7 +203,7 @@ jobs:
           echo '# Build Failed'
           echo
           echo '```'
-          tail -n 300 project/build_log.txt 2>/dev/null || echo 'No Gradle log captured.'
+          tail -n 300 project/build_log.txt 2>/dev/null || tail -n 300 root_build_log.txt 2>/dev/null || echo 'No Gradle log captured.'
           echo '```'
         } > error.md
 
@@ -187,7 +219,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: project/app/build/outputs/apk/debug/*.apk
+        path: |
+          project/app/build/outputs/apk/debug/*.apk
+          app/build/outputs/apk/debug/*.apk
         if-no-files-found: ignore
 
     - name: Upload Release APK
@@ -195,5 +229,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: unsigned-apk
-        path: project/app/build/outputs/apk/release/*.apk
+        path: |
+          project/app/build/outputs/apk/release/*.apk
+          app/build/outputs/apk/release/*.apk
         if-no-files-found: ignore

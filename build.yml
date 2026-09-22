@@ -43,7 +43,7 @@ jobs:
         mkdir -p project/app/src/main/assets
         mkdir -p project/gradle
 
-        # 1. Copy complete resource trees first
+        # 1. Copy complete resource trees
         if [ -d app/src/main/res ]; then
           cp -r app/src/main/res/* project/app/src/main/res/ || true
         fi
@@ -89,12 +89,21 @@ jobs:
           touch project/.env project/.env.example
         fi
 
-        # 5. Copy Keystores
+        # 5. Keystores creation for both debug and release
         if [ -f debug.keystore.base64 ]; then
           base64 -d debug.keystore.base64 > project/debug.keystore || true
+          base64 -d debug.keystore.base64 > debug.keystore || true
         elif [ -f debug.keystore ]; then
           cp debug.keystore project/debug.keystore
         fi
+        if [ ! -f project/debug.keystore ]; then
+          keytool -genkeypair -v -keystore project/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+        fi
+        if [ ! -f project/my-upload-key.jks ]; then
+          keytool -genkeypair -v -keystore project/my-upload-key.jks -storepass android -alias upload -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Release Key,O=Android,C=US" || true
+        fi
+        cp project/debug.keystore debug.keystore 2>/dev/null || true
+        cp project/my-upload-key.jks my-upload-key.jks 2>/dev/null || true
 
         # 6. Copy Manifest
         if [ -f app/src/main/AndroidManifest.xml ]; then
@@ -147,6 +156,9 @@ jobs:
         fi
 
     - name: Build Debug APK + Release APK
+      env:
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'android' }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'android' }}
       run: |
         set -o pipefail
         cd project
@@ -171,13 +183,17 @@ jobs:
         path: error.md
 
     - name: Upload Debug APK
+      if: success() || always()
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
         path: project/app/build/outputs/apk/debug/*.apk
+        if-no-files-found: ignore
 
     - name: Upload Release APK
+      if: success() || always()
       uses: actions/upload-artifact@v4
       with:
         name: unsigned-apk
         path: project/app/build/outputs/apk/release/*.apk
+        if-no-files-found: ignore

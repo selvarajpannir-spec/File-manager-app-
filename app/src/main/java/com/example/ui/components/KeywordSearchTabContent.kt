@@ -164,7 +164,7 @@ fun KeywordSearchTabContent(
                         .testTag("keyword_search_input_field"),
                     placeholder = {
                         Text(
-                            text = "Enter keywords separated by commas (e.g. invoice, 2024, summary)",
+                            text = "Search phone numbers, names, or keywords (e.g. 9876543210, John Doe, invoice)",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 12.sp
                         )
@@ -199,7 +199,7 @@ fun KeywordSearchTabContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Quick search:", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    val presets = listOf("pdf, doc", "config, error", "report, 2024", "password, key", "todo, fixme")
+                    val presets = listOf("phone, backup", "pdf, doc", "report, 2024", "contact, name", "invoice, statement")
                     presets.forEach { preset ->
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -326,7 +326,7 @@ fun KeywordSearchTabContent(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Scanning PDF, DOCX, XLSX, TXT, MD...",
+                                text = "Deep scanning PDF (PDFBox), Word, Excel, VCF, TXT...",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -351,7 +351,7 @@ fun KeywordSearchTabContent(
 
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Scanned ${uiState.keywordSearchScannedCount} files. You can navigate away freely — a system notification will alert you when complete.",
+                        text = "Scanned ${uiState.keywordSearchScannedCount} files with deep content matching. You can navigate away freely — a system notification will alert you when complete.",
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -406,9 +406,9 @@ fun KeywordSearchTabContent(
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = if (uiState.lastScannedKeywords.isNotEmpty()) {
-                                "No matches found across storage for: \"${uiState.lastScannedKeywords.joinToString(", ")}\"\nTry using broader or individual keywords."
+                                "No matches found across storage for: \"${uiState.lastScannedKeywords.joinToString(", ")}\"\nTip: Check if the spelling or phone number digits are correct."
                             } else {
-                                "Enter keyword(s) above and tap 'Start Scan'.\nThe scanner deeply reads PDF, Word (docx), Excel (xlsx), Markdown (md), Text, Logs, and source code files in the background."
+                                "Enter keyword(s), mobile numbers, or contact names above and tap 'Start Scan'.\nDeep scan extracts page text from PDF (PDFBox), Word (docx), Excel (xlsx), VCF contacts, Text, and Code files."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

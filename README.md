@@ -111,16 +111,17 @@ This section documents all technical challenges and errors encountered during de
 
 ---
 
-### 4. Deep Keyword Search Across Multi-Format Files (.docx, .xlsx, .pdf, .txt)
-* **Symptom / Error**: Standard SQLite FTS only searches pre-indexed database records. User-initiated keyword searches on device storage failed to find contents inside `.docx`, `.xlsx`, or raw text files on storage.
-* **Root Cause**: Binary formats like Office Open XML and PDF cannot be read with plain line readers.
+### 4. Deep Keyword Search Across Multi-Format Files (PDF, Mobile Numbers, .docx, .xlsx, .vcf, .txt)
+* **Symptom / Error**: User searched for mobile numbers or contact names stored inside backup PDF documents, and standard file search failed to detect them.
+* **Root Cause**: PDF files compress text streams using `FlateDecode` (ZLIB/Deflate), CMap font encodings, and multi-column layouts. Reading raw bytes directly without a PDF structure engine misses virtually all document text. In addition, phone numbers formatted in various styles (e.g., `(987) 654-3210`, `+91 98765-43210`, `9876543210`) require digit sequence normalization to match irrespective of formatting.
 * **Resolution**:
-  - Implemented `StorageSearchScanner`:
-    - **Comma-Separated Parsing**: Tokenizes input strings into distinct lowercase search terms.
-    - **Office Documents (`.docx`, `.xlsx`, `.pptx`)**: Scans the zipped XML entries (`word/document.xml`, `xl/sharedStrings.xml`) via `ZipInputStream` and strips XML markup tags to index textual content in memory.
-    - **Plain Text / Code (`.txt`, `.md`, `.csv`, `.json`, `.kt`, `.log`)**: Streamed line-by-line using `useLines { }` with excerpt extraction.
-    - **PDF Documents**: Fast ASCII run-length stream parser.
-    - **Matched Keywords Highlighting**: Returns structured `SearchMatchResult` containing matched keyword tags, excerpt snippets, and match location.
+  - Integrated `com.tom-roush:pdfbox-android` (Apache PDFBox for Android):
+    - **PDFBox Page-by-Page Text Extraction**: Uses `PDFTextStripper` to extract full textual contents and metadata (Title, Author, Subject, Keywords) across up to 400 pages per PDF document.
+    - **Mobile Number & Digits Normalization**: Added flexible digit matching so searching `9876543210` matches `(987) 654-3210`, `+91-98765-43210`, and `987 654 3210`.
+    - **Contacts Backup (.vcf) Scanner**: Scans vCard records (`FN:`, `TEL:`, `EMAIL:`, `NOTE:`).
+    - **Office Documents (`.docx`, `.xlsx`, `.pptx`, `.odt`, `.ods`)**: Deep XML parser for document bodies, slides, and shared strings.
+    - **Line Snippets with Page Number**: Returns structured excerpts (e.g. `[Page 2] ... Name: John Doe | Mobile: +1 555-123-4567 ...`).
+    - **Background Async & Notification**: Continues deep searching in the background and posts a system notification upon completion with direct one-tap access.
 
 ---
 

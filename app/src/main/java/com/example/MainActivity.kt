@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
         appSettings = AppSettings.getInstance(applicationContext)
 
         NotificationHelper.createNotificationChannel(this)
+        com.example.util.StorageSearchScanner.initPdfBoxIfNeeded(this)
         handleNotificationIntent(intent)
 
         // Request POST_NOTIFICATIONS on Android 13+

@@ -1,5 +1,5 @@
 {
-  "name": "File Manager",
+  "name": "Files+",
   "description": "Scoped storage file manager with custom tagging, FTS full-text search, and instant file preview.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

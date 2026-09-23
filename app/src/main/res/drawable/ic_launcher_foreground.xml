@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/file_manager_icon_1790081934149"
+        android:width="76dp"
+        android:height="76dp"
+        android:drawable="@drawable/ic_launcher_yellow_folder_lens_1790147092379"
         android:gravity="center" />
 </layer-list>

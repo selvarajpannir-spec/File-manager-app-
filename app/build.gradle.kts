@@ -47,8 +47,7 @@ android {
       if (file(keystorePath).exists()) {
         signingConfig = signingConfigs.getByName("release")
       } else {
-        // Fallback to debug signing so release APK can be directly installed and tested
-        signingConfig = signingConfigs.getByName("debug")
+        signingConfig = null
       }
     }
     debug {

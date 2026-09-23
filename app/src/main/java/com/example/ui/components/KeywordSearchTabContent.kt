@@ -326,23 +326,30 @@ fun KeywordSearchTabContent(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Deep scanning PDF (PDFBox), Word, Excel, VCF, TXT...",
+                                text = "Deep scanning: ${uiState.keywordSearchProgressPercent}%",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
 
-                        Text(
-                            text = "${uiState.keywordSearchFoundCount} found",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "${uiState.keywordSearchFoundCount} found",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(
+                        progress = { (uiState.keywordSearchProgressPercent / 100f).coerceIn(0.01f, 1f) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
@@ -351,7 +358,7 @@ fun KeywordSearchTabContent(
 
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Scanned ${uiState.keywordSearchScannedCount} files with deep content matching. You can navigate away freely — a system notification will alert you when complete.",
+                        text = "Scanned ${uiState.keywordSearchScannedCount} files (${uiState.keywordSearchProgressPercent}%). Running via Foreground Service with live notification progress widget.",
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer

@@ -14,6 +14,7 @@ import com.example.data.local.entity.FileWithTags
 import com.example.data.local.entity.TagEntity
 import com.example.data.model.FileSystemItem
 import com.example.data.repository.FileManagerRepository
+import com.example.service.DeepSearchForegroundService
 import com.example.util.AppSettings
 import com.example.util.AudioPlayerState
 import com.example.util.AudioPreviewManager
@@ -85,6 +86,7 @@ data class FileUiState(
     val keywordSearchResults: List<SearchMatchResult> = emptyList(),
     val keywordSearchScannedCount: Int = 0,
     val keywordSearchFoundCount: Int = 0,
+    val keywordSearchProgressPercent: Int = 0,
     val lastScannedKeywords: List<String> = emptyList(),
     // Auto Organize Feature State
     val showAutoOrganizeDialog: Boolean = false,
@@ -159,6 +161,36 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             repository.initializeDefaultTagsAndCleanupSamples(application)
             loadDirectory(initialPath)
+        }
+
+        // Observe background foreground service deep search progress
+        viewModelScope.launch {
+            DeepSearchForegroundService.searchState.collect { sState ->
+                if (sState.isRunning) {
+                    _uiState.value = _uiState.value.copy(
+                        isKeywordSearching = true,
+                        keywordSearchScannedCount = sState.scannedCount,
+                        keywordSearchFoundCount = sState.foundCount,
+                        keywordSearchProgressPercent = sState.progressPercent,
+                        lastScannedKeywords = sState.keywords
+                    )
+                } else if (sState.isFinished) {
+                    _uiState.value = _uiState.value.copy(
+                        isKeywordSearching = false,
+                        keywordSearchResults = sState.results,
+                        keywordSearchScannedCount = sState.scannedCount,
+                        keywordSearchFoundCount = sState.foundCount,
+                        keywordSearchProgressPercent = 100,
+                        lastScannedKeywords = sState.keywords,
+                        statusMessage = if (sState.statusMessage.isNotEmpty()) sState.statusMessage else _uiState.value.statusMessage
+                    )
+                } else if (sState.isCancelled) {
+                    _uiState.value = _uiState.value.copy(
+                        isKeywordSearching = false,
+                        statusMessage = "Keyword search cancelled."
+                    )
+                }
+            }
         }
     }
 
@@ -325,52 +357,29 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
 
-        keywordSearchJob?.cancel()
-        keywordSearchJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isKeywordSearching = true,
-                keywordSearchResults = emptyList(),
-                keywordSearchScannedCount = 0,
-                keywordSearchFoundCount = 0,
-                lastScannedKeywords = keywords,
-                statusMessage = "Keyword search started in background..."
-            )
+        val rootPath = _uiState.value.keywordSearchRootPath
+        val matchAll = _uiState.value.keywordSearchMatchAll
 
-            val rootPath = _uiState.value.keywordSearchRootPath
-            val matchAll = _uiState.value.keywordSearchMatchAll
+        _uiState.value = _uiState.value.copy(
+            isKeywordSearching = true,
+            keywordSearchResults = emptyList(),
+            keywordSearchScannedCount = 0,
+            keywordSearchFoundCount = 0,
+            keywordSearchProgressPercent = 0,
+            lastScannedKeywords = keywords,
+            statusMessage = "Deep keyword scan running via Foreground Service..."
+        )
 
-            val results = repository.searchKeywordsAcrossStorage(
-                context = getApplication(),
-                keywords = keywords,
-                rootPath = rootPath,
-                matchAllKeywords = matchAll,
-                onProgress = { scanned, found ->
-                    _uiState.value = _uiState.value.copy(
-                        keywordSearchScannedCount = scanned,
-                        keywordSearchFoundCount = found
-                    )
-                }
-            )
-
-            _uiState.value = _uiState.value.copy(
-                isKeywordSearching = false,
-                keywordSearchResults = results,
-                keywordSearchFoundCount = results.size,
-                statusMessage = "Keyword scan complete: ${results.size} match(es) found."
-            )
-
-            // Post system notification for background completion with direct access to page
-            NotificationHelper.showSearchCompletedNotification(
-                context = getApplication(),
-                keywords = keywords,
-                foundCount = results.size,
-                scannedCount = _uiState.value.keywordSearchScannedCount
-            )
-        }
+        DeepSearchForegroundService.startSearch(
+            context = getApplication(),
+            keywords = keywords,
+            rootPath = rootPath,
+            matchAll = matchAll
+        )
     }
 
     fun cancelKeywordSearch() {
-        keywordSearchJob?.cancel()
+        DeepSearchForegroundService.cancelSearch(getApplication())
         _uiState.value = _uiState.value.copy(
             isKeywordSearching = false,
             statusMessage = "Keyword scan cancelled."
@@ -378,12 +387,13 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun clearKeywordSearchResults() {
-        keywordSearchJob?.cancel()
+        DeepSearchForegroundService.clearState()
         _uiState.value = _uiState.value.copy(
             isKeywordSearching = false,
             keywordSearchResults = emptyList(),
             keywordSearchScannedCount = 0,
             keywordSearchFoundCount = 0,
+            keywordSearchProgressPercent = 0,
             keywordSearchInput = ""
         )
     }

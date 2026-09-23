@@ -14,10 +14,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -25,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.FileExplorerTab
 import com.example.ui.FileManagerScreen
 import com.example.ui.FileManagerViewModel
+import com.example.ui.components.SplashScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.util.AppSettings
 import com.example.util.NotificationHelper
@@ -54,31 +60,46 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
             val fontScale by appSettings.fontScale.collectAsStateWithLifecycle()
+            var showSplash by rememberSaveable { mutableStateOf(pendingTargetTab == null) }
 
             MyApplicationTheme(
                 themeMode = themeMode,
                 fontScaleMultiplier = fontScale.scale
             ) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val viewModel: FileManagerViewModel = viewModel()
-                    activeViewModel = viewModel
+                    Crossfade(
+                        targetState = showSplash,
+                        animationSpec = tween(400),
+                        label = "splash_transition"
+                    ) { isSplashVisible ->
+                        if (isSplashVisible) {
+                            SplashScreen(
+                                onSplashComplete = {
+                                    showSplash = false
+                                }
+                            )
+                        } else {
+                            val viewModel: FileManagerViewModel = viewModel()
+                            activeViewModel = viewModel
 
-                    // If app was opened via notification, switch directly to KEYWORD_SEARCH tab
-                    LaunchedEffect(pendingTargetTab) {
-                        if (pendingTargetTab == NotificationHelper.TAB_KEYWORD_SEARCH) {
-                            viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH)
-                            pendingTargetTab = null
+                            // If app was opened via notification, switch directly to KEYWORD_SEARCH tab
+                            LaunchedEffect(pendingTargetTab) {
+                                if (pendingTargetTab == NotificationHelper.TAB_KEYWORD_SEARCH) {
+                                    viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH)
+                                    pendingTargetTab = null
+                                }
+                            }
+
+                            BackHandler(enabled = true) {
+                                val handled = viewModel.navigateBack()
+                                if (!handled) {
+                                    finish()
+                                }
+                            }
+
+                            FileManagerScreen(viewModel = viewModel)
                         }
                     }
-
-                    BackHandler(enabled = true) {
-                        val handled = viewModel.navigateBack()
-                        if (!handled) {
-                            finish()
-                        }
-                    }
-
-                    FileManagerScreen(viewModel = viewModel)
                 }
             }
         }

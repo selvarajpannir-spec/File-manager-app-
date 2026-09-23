@@ -47,7 +47,7 @@ android {
       if (file(keystorePath).exists()) {
         signingConfig = signingConfigs.getByName("release")
       } else {
-        signingConfig = null
+        signingConfig = signingConfigs.getByName("debug")
       }
     }
     debug {

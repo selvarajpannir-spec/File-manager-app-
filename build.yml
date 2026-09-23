@@ -34,7 +34,9 @@ jobs:
 
     - name: Assemble Multi-Source Project Directory
       run: |
-        # 1. Prepare Target Directory Structure
+        # Clean any old build artifacts
+        rm -rf project output_apks
+        mkdir -p output_apks
         mkdir -p project/app/src/main/java
         mkdir -p project/app/src/main/res/layout
         mkdir -p project/app/src/main/res/values
@@ -44,14 +46,14 @@ jobs:
         mkdir -p project/app/src/main/assets
         mkdir -p project/gradle
 
-        # 2. Multi-Path Resource Harvesting
+        # 1. Multi-Path Resource Harvesting
         for res_dir in app/src/main/res src/main/res res app/res; do
           if [ -d "$res_dir" ]; then
             cp -r "$res_dir"/* project/app/src/main/res/ 2>/dev/null || true
           fi
         done
 
-        # 3. Multi-Path Gradle Configuration & Version Catalog
+        # 2. Multi-Path Gradle Configuration & Version Catalog
         for gradle_dir in gradle app/gradle; do
           if [ -d "$gradle_dir" ]; then
             cp -r "$gradle_dir"/* project/gradle/ 2>/dev/null || true
@@ -73,7 +75,7 @@ jobs:
           fi
         done
 
-        # 4. Multi-Path App Build Configuration
+        # 3. Multi-Path App Build Configuration
         if [ -f app/build.gradle.kts ]; then
           cp app/build.gradle.kts project/app/build.gradle.kts
         elif [ -f app/build.gradle ]; then
@@ -84,7 +86,7 @@ jobs:
           cp build.gradle project/app/build.gradle
         fi
 
-        # 5. Environment & Secrets Setup
+        # 4. Environment & Secrets Setup
         touch project/.env project/.env.example
         for env_file in .env.example .env app/.env; do
           if [ -f "$env_file" ]; then
@@ -93,7 +95,7 @@ jobs:
           fi
         done
 
-        # 6. Multi-Source Keystore Initialization
+        # 5. Keystore Initialization
         if [ -f debug.keystore.base64 ]; then
           base64 -d debug.keystore.base64 > project/debug.keystore 2>/dev/null || true
           base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || true
@@ -112,7 +114,7 @@ jobs:
         cp project/debug.keystore debug.keystore 2>/dev/null || true
         cp project/my-upload-key.jks my-upload-key.jks 2>/dev/null || true
 
-        # 7. Multi-Path Android Manifest Resolution
+        # 6. Multi-Path Android Manifest Resolution
         for mf in app/src/main/AndroidManifest.xml src/main/AndroidManifest.xml AndroidManifest.xml; do
           if [ -f "$mf" ]; then
             cp "$mf" project/app/src/main/AndroidManifest.xml 2>/dev/null || true
@@ -120,7 +122,7 @@ jobs:
           fi
         done
 
-        # 8. Multi-Source Kotlin & Java File Harvesting
+        # 7. Multi-Source Kotlin & Java File Harvesting
         for src_dir in app/src/main/java src/main/java app/src/main/kotlin src/main/kotlin java; do
           if [ -d "$src_dir" ]; then
             cp -r "$src_dir"/* project/app/src/main/java/ 2>/dev/null || true
@@ -130,7 +132,7 @@ jobs:
         find . -maxdepth 1 -name "*.kt" -exec cp {} project/app/src/main/java/com/example/ \; 2>/dev/null || true
         find . -maxdepth 1 -name "*.java" -exec cp {} project/app/src/main/java/com/example/ \; 2>/dev/null || true
 
-        # 9. Multi-Path Flat Resource Fallbacks
+        # 8. Multi-Path Flat Resource Fallbacks
         shopt -s nullglob
         for f in activity_*.xml fragment_*.xml item_*.xml \
                  view_*.xml layout_*.xml row_*.xml dialog_*.xml; do
@@ -196,6 +198,20 @@ jobs:
           exit 1
         fi
 
+        # Collect exactly ONE clean debug APK and ONE clean release APK into output_apks/
+        mkdir -p output_apks/debug output_apks/release
+        if ls project/app/build/outputs/apk/debug/*.apk 1>/dev/null 2>&1; then
+          cp -f $(ls project/app/build/outputs/apk/debug/*.apk | head -n 1) output_apks/debug/app-debug.apk
+        elif ls app/build/outputs/apk/debug/*.apk 1>/dev/null 2>&1; then
+          cp -f $(ls app/build/outputs/apk/debug/*.apk | head -n 1) output_apks/debug/app-debug.apk
+        fi
+
+        if ls project/app/build/outputs/apk/release/*.apk 1>/dev/null 2>&1; then
+          cp -f $(ls project/app/build/outputs/apk/release/*.apk | head -n 1) output_apks/release/app-release.apk
+        elif ls app/build/outputs/apk/release/*.apk 1>/dev/null 2>&1; then
+          cp -f $(ls app/build/outputs/apk/release/*.apk | head -n 1) output_apks/release/app-release.apk
+        fi
+
     - name: Write error.md on failure
       if: failure()
       run: |
@@ -215,21 +231,17 @@ jobs:
         path: error.md
 
     - name: Upload Debug APK
-      if: success() || always()
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: |
-          project/app/build/outputs/apk/debug/*.apk
-          app/build/outputs/apk/debug/*.apk
-        if-no-files-found: ignore
+        path: output_apks/debug/app-debug.apk
+        if-no-files-found: error
 
     - name: Upload Release APK
-      if: success() || always()
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: unsigned-apk
-        path: |
-          project/app/build/outputs/apk/release/*.apk
-          app/build/outputs/apk/release/*.apk
+        name: release-apk
+        path: output_apks/release/app-release.apk
         if-no-files-found: ignore

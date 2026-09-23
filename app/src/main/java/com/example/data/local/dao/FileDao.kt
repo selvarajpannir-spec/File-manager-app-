@@ -72,6 +72,16 @@ interface FileDao {
     """)
     fun getFilesByTagIds(tagIds: List<Long>): Flow<List<FileWithTags>>
 
+    @Transaction
+    @Query("SELECT * FROM files WHERE file_path = :path LIMIT 1")
+    suspend fun getFileWithTagsByPath(path: String): FileWithTags?
+
+    @Query("SELECT * FROM files WHERE file_path = :path LIMIT 1")
+    suspend fun getFileByPath(path: String): FileEntity?
+
     @Query("SELECT COUNT(*) FROM files")
     suspend fun getFileCount(): Int
+
+    @Query("SELECT * FROM files WHERE is_sample = 1 OR file_name LIKE '%sample%' OR file_name LIKE '%notes%'")
+    suspend fun getSampleFiles(): List<FileEntity>
 }

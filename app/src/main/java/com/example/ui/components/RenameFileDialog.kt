@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -27,28 +27,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.data.model.FileSystemItem
 
 @Composable
-fun CreateFileDialog(
+fun RenameFileDialog(
+    item: FileSystemItem?,
     onDismiss: () -> Unit,
-    onCreateFile: (String, String) -> Unit
+    onRename: (String) -> Unit
 ) {
-    var fileName by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    if (item == null) return
+    var newName by remember(item.name) { mutableStateOf(item.name) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.NoteAdd,
+                    imageVector = Icons.Default.Edit,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "New File",
+                    text = "Rename Item",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -57,44 +59,32 @@ fun CreateFileDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    label = { Text("File Name (e.g. build_notes.txt, test.sh)") },
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("New Name") },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("create_file_name_input")
-                )
-
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("File Content") },
-                    minLines = 4,
-                    maxLines = 8,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("create_file_content_input")
+                        .testTag("rename_input")
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (fileName.isNotBlank()) {
-                        onCreateFile(fileName.trim(), content)
+                    if (newName.isNotBlank()) {
+                        onRename(newName.trim())
                     }
                 },
-                enabled = fileName.isNotBlank(),
+                enabled = newName.isNotBlank() && newName != item.name,
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.testTag("confirm_create_file_button")
+                modifier = Modifier.testTag("confirm_rename_btn")
             ) {
-                Text("Create File")
+                Text("Rename")
             }
         },
         dismissButton = {

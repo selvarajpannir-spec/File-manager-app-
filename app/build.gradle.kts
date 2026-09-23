@@ -32,15 +32,8 @@ android {
         storePassword = System.getenv("STORE_PASSWORD") ?: "android"
         keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
         keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
-      }
-    }
-    create("debugConfig") {
-      val debugFile = file("${rootDir}/debug.keystore")
-      if (debugFile.exists()) {
-        storeFile = debugFile
-        storePassword = "android"
-        keyAlias = "androiddebugkey"
-        keyPassword = "android"
+        enableV1Signing = true
+        enableV2Signing = true
       }
     }
   }
@@ -53,14 +46,13 @@ android {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       if (file(keystorePath).exists()) {
         signingConfig = signingConfigs.getByName("release")
-      } else if (file("${rootDir}/debug.keystore").exists()) {
-        signingConfig = signingConfigs.getByName("debugConfig")
+      } else {
+        // Fallback to debug signing so release APK can be directly installed and tested
+        signingConfig = signingConfigs.getByName("debug")
       }
     }
     debug {
-      if (file("${rootDir}/debug.keystore").exists()) {
-        signingConfig = signingConfigs.getByName("debugConfig")
-      }
+      signingConfig = signingConfigs.getByName("debug")
     }
   }
   compileOptions {

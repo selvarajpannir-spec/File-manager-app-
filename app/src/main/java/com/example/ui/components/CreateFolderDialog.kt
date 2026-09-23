@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -29,26 +29,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun CreateFileDialog(
+fun CreateFolderDialog(
     onDismiss: () -> Unit,
-    onCreateFile: (String, String) -> Unit
+    onCreateFolder: (String) -> Unit
 ) {
-    var fileName by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    var folderName by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.NoteAdd,
+                    imageVector = Icons.Default.CreateNewFolder,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "New File",
+                    text = "New Folder",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -57,44 +56,32 @@ fun CreateFileDialog(
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    label = { Text("File Name (e.g. build_notes.txt, test.sh)") },
+                    value = folderName,
+                    onValueChange = { folderName = it },
+                    label = { Text("Folder Name (e.g. My_Project, configs)") },
                     singleLine = true,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("create_file_name_input")
-                )
-
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("File Content") },
-                    minLines = 4,
-                    maxLines = 8,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("create_file_content_input")
+                        .testTag("create_folder_input")
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    if (fileName.isNotBlank()) {
-                        onCreateFile(fileName.trim(), content)
+                    if (folderName.isNotBlank()) {
+                        onCreateFolder(folderName.trim())
                     }
                 },
-                enabled = fileName.isNotBlank(),
+                enabled = folderName.isNotBlank(),
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.testTag("confirm_create_file_button")
+                modifier = Modifier.testTag("confirm_create_folder_btn")
             ) {
-                Text("Create File")
+                Text("Create Folder")
             }
         },
         dismissButton = {

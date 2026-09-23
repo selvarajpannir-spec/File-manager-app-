@@ -1,7 +1,11 @@
 package com.example.ui.components
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -28,6 +32,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Pause
@@ -67,16 +73,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.data.local.entity.FileWithTags
+import com.example.data.model.FileSystemItem
 import com.example.util.AudioPlayerState
 import com.example.util.FileCategory
 import com.example.util.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun TopPreviewCard(
-    fileWithTags: FileWithTags?,
+    item: FileSystemItem?,
     audioState: AudioPlayerState,
     onClose: () -> Unit,
     onAddTagClick: () -> Unit,
@@ -87,24 +94,22 @@ fun TopPreviewCard(
     modifier: Modifier = Modifier
 ) {
     AnimatedVisibility(
-        visible = fileWithTags != null,
+        visible = item != null,
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically(),
         modifier = modifier
     ) {
-        if (fileWithTags != null) {
-            val file = fileWithTags.file
-            val category = FileUtil.getMimeTypeCategory(file.fileName, file.fileType)
+        if (item != null) {
+            val category = item.category
             val categoryColor = getCategoryColor(category)
-            val context = LocalContext.current
-            val uri = remember(file.fileUri) { Uri.parse(file.fileUri) }
+            val uri = remember(item.path) { Uri.fromFile(item.file) }
 
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 6.dp)
                     .testTag("top_preview_card"),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -139,7 +144,7 @@ fun TopPreviewCard(
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = file.fileName,
+                                text = item.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -148,25 +153,27 @@ fun TopPreviewCard(
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = onShare,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = "Share",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = onOpenExternal,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Launch,
-                                    contentDescription = "Open in app",
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            if (!item.isDirectory) {
+                                IconButton(
+                                    onClick = onShare,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = "Share",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = onOpenExternal,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Launch,
+                                        contentDescription = "Open in External App",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                             IconButton(
                                 onClick = onClose,
@@ -187,7 +194,7 @@ fun TopPreviewCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 120.dp, max = 220.dp)
+                            .heightIn(min = 120.dp, max = 240.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
                         contentAlignment = Alignment.Center
@@ -201,25 +208,26 @@ fun TopPreviewCard(
                             }
                             FileCategory.AUDIO -> {
                                 AudioPreviewContent(
-                                    fileId = file.id,
-                                    fileName = file.fileName,
+                                    fileId = item.dbFileId ?: item.path.hashCode().toLong(),
+                                    fileName = item.name,
                                     uri = uri,
                                     audioState = audioState,
-                                    onTogglePlay = { onTogglePlayAudio(uri, file.id, file.fileName) },
+                                    onTogglePlay = { onTogglePlayAudio(uri, item.dbFileId ?: item.path.hashCode().toLong(), item.name) },
                                     onSeek = onSeekAudio
                                 )
                             }
-                            FileCategory.TEXT, FileCategory.DOCUMENT -> {
-                                TextPreviewContent(
-                                    uri = uri,
-                                    fallbackText = file.contentText
-                                )
+                            FileCategory.TEXT, FileCategory.CODE -> {
+                                CodeTextPreviewContent(file = item.file)
+                            }
+                            FileCategory.SYSTEM_BINARY -> {
+                                HexDumpPreviewContent(file = item.file)
+                            }
+                            FileCategory.FOLDER -> {
+                                FolderPreviewContent(item = item)
                             }
                             else -> {
                                 GenericPreviewContent(
-                                    fileName = file.fileName,
-                                    fileSize = file.fileSize,
-                                    fileType = file.fileType,
+                                    item = item,
                                     onOpen = onOpenExternal
                                 )
                             }
@@ -235,8 +243,9 @@ fun TopPreviewCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "${FileUtil.formatFileSize(file.fileSize)} • ${FileUtil.formatDate(file.lastModified)}",
+                            text = if (item.isDirectory) item.permissions else "${item.formattedSize} • ${item.permissions}",
                             style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp
                         )
@@ -246,20 +255,184 @@ fun TopPreviewCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier.horizontalScroll(rememberScrollState())
                         ) {
-                            fileWithTags.tags.forEach { tag ->
+                            item.tags.forEach { tag ->
                                 TagChipItem(tag = tag)
                             }
                             TextButton(
                                 onClick = onAddTagClick,
                                 modifier = Modifier.height(28.dp)
                             ) {
-                                Text("+ Edit Tags", fontSize = 11.sp)
+                                Text("+ Tags", fontSize = 11.sp)
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun CodeTextPreviewContent(file: File) {
+    val context = LocalContext.current
+    var textContent by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+    var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+
+    LaunchedEffect(file.absolutePath) {
+        isLoading = true
+        textContent = withContext(Dispatchers.IO) {
+            FileUtil.readTextFileLines(file, maxLines = 300, maxChars = 15000)
+        }
+        isLoading = false
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${file.name} (Monospace Viewer)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                IconButton(
+                    onClick = {
+                        val clip = ClipData.newPlainText("File content", textContent ?: "")
+                        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(clip)
+                        Toast.makeText(context, "Copied content to clipboard", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "Copy text",
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 160.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = textContent ?: "Empty file",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HexDumpPreviewContent(file: File) {
+    var hexContent by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+    var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+
+    LaunchedEffect(file.absolutePath) {
+        isLoading = true
+        hexContent = withContext(Dispatchers.IO) {
+            FileUtil.generateHexDump(file, maxBytes = 512)
+        }
+        isLoading = false
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Text(
+                text = "Hex / Binary Inspector (ELF / SO / BIN)",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFDC2626),
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 160.dp)
+                    .verticalScroll(rememberScrollState())
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = hexContent ?: "No data",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FolderPreviewContent(item: FileSystemItem) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Folder,
+            contentDescription = null,
+            tint = Color(0xFFEAB308),
+            modifier = Modifier.size(44.dp)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Path: ${item.path}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = "${item.childCount ?: 0} items inside • ${item.permissions}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 11.sp
+        )
     }
 }
 
@@ -373,7 +546,10 @@ fun AudioPreviewContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(36.dp)
@@ -445,43 +621,8 @@ fun AudioPreviewContent(
 }
 
 @Composable
-fun TextPreviewContent(uri: Uri, fallbackText: String) {
-    val context = LocalContext.current
-    var textContent by remember(uri, fallbackText) { mutableStateOf(fallbackText) }
-
-    LaunchedEffect(uri) {
-        if (fallbackText.isBlank()) {
-            val extracted = withContext(Dispatchers.IO) {
-                FileUtil.extractTextPreview(context, uri, 1500)
-            }
-            if (extracted.isNotBlank()) {
-                textContent = extracted
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 160.dp)
-            .padding(8.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Text(
-            text = textContent.ifBlank { "Document loaded. Tap 'Open with App' to view full file." },
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            lineHeight = 16.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
 fun GenericPreviewContent(
-    fileName: String,
-    fileSize: Long,
-    fileType: String,
+    item: FileSystemItem,
     onOpen: () -> Unit
 ) {
     Column(
@@ -499,14 +640,14 @@ fun GenericPreviewContent(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = fileName,
+            text = item.name,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
         Text(
-            text = "${FileUtil.formatFileSize(fileSize)} • $fileType",
+            text = "${item.formattedSize} • ${item.permissions}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

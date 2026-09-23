@@ -22,12 +22,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -36,8 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -54,8 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.local.entity.FileWithTags
 import com.example.data.local.entity.TagEntity
+import com.example.data.model.FileSystemItem
 
 val PALETTE_COLORS = listOf(
     "#6366F1", // Indigo
@@ -65,19 +59,20 @@ val PALETTE_COLORS = listOf(
     "#EF4444", // Rose
     "#8B5CF6", // Purple
     "#EC4899", // Pink
-    "#14B8A6"  // Teal
+    "#14B8A6", // Teal
+    "#64748B"  // Slate
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TagSelectionBottomSheet(
-    fileWithTags: FileWithTags?,
+    item: FileSystemItem?,
     allTags: List<TagEntity>,
     onToggleTag: (TagEntity) -> Unit,
     onCreateAndAssignTag: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    if (fileWithTags == null) return
+    if (item == null) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newTagName by remember { mutableStateOf("") }
@@ -110,12 +105,12 @@ fun TagSelectionBottomSheet(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
-                        text = "Assign Tags",
+                        text = "Assign Color Tags",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = fileWithTags.file.fileName,
+                        text = item.name,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -124,13 +119,13 @@ fun TagSelectionBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // SAVED TAGS SECTION
             Text(
-                text = "Saved Tags (Tap to toggle)",
+                text = "Existing Tags (Tap to add/remove)",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -150,7 +145,7 @@ fun TagSelectionBottomSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     allTags.forEach { tag ->
-                        val isAssigned = fileWithTags.tags.any { it.tagId == tag.tagId }
+                        val isAssigned = item.tags.any { it.tagId == tag.tagId }
                         val tagColor = parseColor(tag.colorHex)
 
                         FilterChip(
@@ -185,22 +180,22 @@ fun TagSelectionBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // CREATE NEW TAG ON THE FLY
             Text(
-                text = "Create New Tag",
+                text = "Create New Custom Tag",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = newTagName,
                 onValueChange = { newTagName = it },
-                label = { Text("Tag Name (e.g. invoice, urgent, client_b)") },
+                label = { Text("Tag Name (e.g. logs, system_conf, work, docs)") },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
@@ -212,7 +207,7 @@ fun TagSelectionBottomSheet(
 
             // Palette Color Picker
             Text(
-                text = "Choose Tag Color",
+                text = "Choose Tag Accent Color",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -271,7 +266,7 @@ fun TagSelectionBottomSheet(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Create & Assign to File")
+                Text("Create & Attach Tag")
             }
         }
     }

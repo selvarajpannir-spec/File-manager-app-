@@ -148,12 +148,14 @@ jobs:
         if [ -d xml ]; then
           cp -r xml/* project/app/src/main/res/xml/ 2>/dev/null || true
         fi
-        for f in ic_launcher_*.xml ic_*.xml *.png *.jpg *.jpeg *.webp; do
+        for f in ic_launcher_background.xml ic_launcher_foreground.xml *.png *.jpg *.jpeg *.webp; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/drawable/ 2>/dev/null || true
         done
         for f in ic_launcher.xml ic_launcher_round.xml; do
           [ -f "$f" ] && cp "$f" project/app/src/main/res/mipmap-anydpi-v26/ 2>/dev/null || true
         done
+        # Ensure any mistakenly placed adaptive-icons in drawable are purged
+        rm -f project/app/src/main/res/drawable/ic_launcher.xml project/app/src/main/res/drawable/ic_launcher_round.xml 2>/dev/null || true
         if [ -f app/proguard-rules.pro ]; then
           cp app/proguard-rules.pro project/app/proguard-rules.pro
         elif [ -f proguard-rules.pro ]; then

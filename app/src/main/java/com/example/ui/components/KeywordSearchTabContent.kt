@@ -24,8 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ManageSearch
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -119,7 +119,7 @@ fun KeywordSearchTabContent(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.ManageSearch,
+                            imageVector = Icons.AutoMirrored.Filled.ManageSearch,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
@@ -397,7 +397,7 @@ fun KeywordSearchTabContent(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = Icons.Default.ManageSearch,
+                            imageVector = Icons.AutoMirrored.Filled.ManageSearch,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.outlineVariant,
                             modifier = Modifier.size(52.dp)

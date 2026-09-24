@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Code
@@ -347,7 +348,7 @@ fun getCategoryIcon(category: FileCategory): ImageVector {
         FileCategory.DOCUMENT -> Icons.Default.Description
         FileCategory.ARCHIVE -> Icons.Default.FolderZip
         FileCategory.SYSTEM_BINARY -> Icons.Default.Memory
-        FileCategory.OTHER -> Icons.Default.InsertDriveFile
+        FileCategory.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
 }
 

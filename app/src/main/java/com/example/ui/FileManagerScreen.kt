@@ -33,6 +33,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.ManageSearch
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bookmark
@@ -44,19 +51,15 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.ManageSearch
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Visibility
@@ -363,7 +366,7 @@ fun FileManagerScreen(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = Icons.Default.Sort,
+                                            imageVector = Icons.AutoMirrored.Filled.Sort,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp)
@@ -521,13 +524,13 @@ fun FileManagerScreen(
                 NavigationBarItem(
                     selected = uiState.activeTab == FileExplorerTab.KEYWORD_SEARCH,
                     onClick = { viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH) },
-                    icon = { Icon(Icons.Default.ManageSearch, contentDescription = "Keyword Search") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ManageSearch, contentDescription = "Keyword Search") },
                     label = { Text("Keywords") }
                 )
                 NavigationBarItem(
                     selected = uiState.activeTab == FileExplorerTab.TAGGED_FILES,
                     onClick = { viewModel.setActiveTab(FileExplorerTab.TAGGED_FILES) },
-                    icon = { Icon(Icons.Default.Label, contentDescription = "Tagged Files") },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tagged Files") },
                     label = { Text("Tags") }
                 )
                 NavigationBarItem(
@@ -565,7 +568,7 @@ fun FileManagerScreen(
                                         viewModel.openCreateFileDialog()
                                     }
                                 ) {
-                                    Icon(Icons.Default.NoteAdd, contentDescription = null, Modifier.size(18.dp))
+                                    Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null, Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text("New Text File")
                                 }
@@ -1152,7 +1155,7 @@ fun TaggedFilesTabContent(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        imageVector = Icons.Default.Label,
+                        imageVector = Icons.AutoMirrored.Filled.Label,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.size(56.dp)

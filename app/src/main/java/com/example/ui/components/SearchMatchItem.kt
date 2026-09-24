@@ -16,12 +16,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
@@ -184,7 +184,7 @@ fun SearchMatchItem(
                             )
                             DropdownMenuItem(
                                 text = { Text("Open in External App") },
-                                leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = null, Modifier.size(18.dp)) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, Modifier.size(18.dp)) },
                                 onClick = {
                                     showMenu = false
                                     onOpenWithSystem()

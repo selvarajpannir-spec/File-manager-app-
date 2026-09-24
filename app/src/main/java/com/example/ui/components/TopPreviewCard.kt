@@ -28,13 +28,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
@@ -186,7 +186,7 @@ fun TopPreviewCard(
                                     modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.OpenInNew,
+                                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                         contentDescription = "Open in External App",
                                         modifier = Modifier.size(15.dp)
                                     )
@@ -499,7 +499,7 @@ fun CompactGenericPreview(item: FileSystemItem, onFullScreen: () -> Unit) {
         modifier = Modifier.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = "${item.formattedSize} • Tap for In-App Reader",

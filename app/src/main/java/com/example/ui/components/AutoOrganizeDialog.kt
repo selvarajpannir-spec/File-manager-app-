@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Category
@@ -544,7 +545,7 @@ fun AutoOrganizeDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.testTag("confirm_start_auto_organize_btn")
                 ) {
-                    Icon(Icons.Default.DriveFileMove, contentDescription = null, Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.DriveFileMove, contentDescription = null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Proceed & Organize")
                 }

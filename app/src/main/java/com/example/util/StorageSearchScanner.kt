@@ -134,7 +134,7 @@ object StorageSearchScanner {
                     }
                 } else {
                     scannedCount++
-                    if (scannedCount % 15 == 0) {
+                    if (scannedCount % 4 == 0) {
                         onProgress?.invoke(scannedCount, results.size)
                     }
 

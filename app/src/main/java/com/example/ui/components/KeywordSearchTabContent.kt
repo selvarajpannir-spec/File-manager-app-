@@ -79,9 +79,9 @@ fun KeywordSearchTabContent(
             audioState = audioState,
             highlightKeywords = uiState.lastScannedKeywords,
             onClose = { viewModel.onSelectFileForPreview(null) },
-            onFullScreen = {
+            onPreviewClick = {
                 uiState.selectedItemForPreview?.let {
-                    viewModel.openFullScreenViewer(it, uiState.lastScannedKeywords)
+                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
                 }
             },
             onAddTagClick = {
@@ -433,7 +433,7 @@ fun KeywordSearchTabContent(
                                 viewModel.setActiveTab(FileExplorerTab.BROWSER)
                                 viewModel.loadDirectory(result.item.path)
                             } else {
-                                viewModel.openFileChoicePrompt(result.item, result.matchedKeywords)
+                                viewModel.onSelectFileForPreview(result.item, result.matchedKeywords)
                             }
                         },
                         onAddTagClick = { viewModel.openTagSheet(result.item) },

@@ -812,7 +812,7 @@ fun FileManagerScreen(
         )
     }
 
-    // Open File Choice Prompt Dialog (Internal vs External vs Top Preview)
+    // Open File Choice Prompt Dialog (Internal vs External)
     if (uiState.itemForOpenFilePrompt != null) {
         val item = uiState.itemForOpenFilePrompt!!
         OpenFilePromptDialog(
@@ -822,10 +822,6 @@ fun FileManagerScreen(
             },
             onOpenExternal = {
                 openFileInExternalApp(context, item.file)
-                viewModel.closeFileChoicePrompt()
-            },
-            onOpenTopPreview = {
-                viewModel.onSelectFileForPreview(item)
                 viewModel.closeFileChoicePrompt()
             },
             onDismiss = {
@@ -898,9 +894,9 @@ fun BrowserTabContent(
             audioState = audioState,
             highlightKeywords = uiState.lastScannedKeywords,
             onClose = { viewModel.onSelectFileForPreview(null) },
-            onFullScreen = {
+            onPreviewClick = {
                 uiState.selectedItemForPreview?.let {
-                    viewModel.openFullScreenViewer(it, uiState.lastScannedKeywords)
+                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
                 }
             },
             onAddTagClick = {
@@ -1050,7 +1046,7 @@ fun BrowserTabContent(
                                 if (item.isDirectory) {
                                     viewModel.loadDirectory(item.path)
                                 } else {
-                                    viewModel.openFileChoicePrompt(item)
+                                    viewModel.onSelectFileForPreview(item)
                                 }
                             },
                             onAddTagClick = { viewModel.openTagSheet(item) },
@@ -1113,9 +1109,9 @@ fun TaggedFilesTabContent(
             audioState = audioState,
             highlightKeywords = uiState.lastScannedKeywords,
             onClose = { viewModel.onSelectFileForPreview(null) },
-            onFullScreen = {
+            onPreviewClick = {
                 uiState.selectedItemForPreview?.let {
-                    viewModel.openFullScreenViewer(it, uiState.lastScannedKeywords)
+                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
                 }
             },
             onAddTagClick = {
@@ -1184,7 +1180,7 @@ fun TaggedFilesTabContent(
                                 viewModel.setActiveTab(FileExplorerTab.BROWSER)
                                 viewModel.loadDirectory(item.path)
                             } else {
-                                viewModel.openFileChoicePrompt(item)
+                                viewModel.onSelectFileForPreview(item)
                             }
                         },
                         onAddTagClick = { viewModel.openTagSheet(item) },

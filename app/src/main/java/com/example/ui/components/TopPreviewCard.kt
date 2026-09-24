@@ -89,7 +89,7 @@ fun TopPreviewCard(
     audioState: AudioPlayerState,
     highlightKeywords: List<String> = emptyList(),
     onClose: () -> Unit,
-    onFullScreen: () -> Unit,
+    onPreviewClick: () -> Unit,
     onAddTagClick: () -> Unit,
     onOpenExternal: () -> Unit,
     onShare: () -> Unit,
@@ -160,14 +160,14 @@ fun TopPreviewCard(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = onFullScreen,
+                                onClick = onPreviewClick,
                                 modifier = Modifier.size(28.dp).testTag("top_preview_fullscreen_btn")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "Full Screen Viewer",
+                                    contentDescription = "Open File Options",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(17.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                             if (!item.isDirectory) {
@@ -207,19 +207,19 @@ fun TopPreviewCard(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Streamlined Compact Content Preview (Max ~65-75dp height)
+                    // Streamlined Compact Content Preview (Max ~65-75dp height) - Tap prompts user for Open Internal / External
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 50.dp, max = 75.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                            .clickable { onFullScreen() },
+                            .clickable { onPreviewClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         when (category) {
                             FileCategory.PDF -> {
-                                CompactPdfPreview(uri = uri, onFullScreen = onFullScreen)
+                                CompactPdfPreview(uri = uri, onFullScreen = onPreviewClick)
                             }
                             FileCategory.IMAGE -> {
                                 CompactImagePreview(uri = uri)
@@ -244,7 +244,7 @@ fun TopPreviewCard(
                                 CompactFolderPreview(item = item)
                             }
                             else -> {
-                                CompactGenericPreview(item = item, onFullScreen = onFullScreen)
+                                CompactGenericPreview(item = item, onFullScreen = onPreviewClick)
                             }
                         }
                     }
@@ -266,11 +266,11 @@ fun TopPreviewCard(
                         )
 
                         Text(
-                            text = "Tap box for Full Screen →",
+                            text = "Tap preview to Open (In-App / External) →",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontSize = 10.sp,
-                            modifier = Modifier.clickable { onFullScreen() }
+                            modifier = Modifier.clickable { onPreviewClick() }
                         )
                     }
                 }

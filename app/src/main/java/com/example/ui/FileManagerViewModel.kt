@@ -385,6 +385,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun cancelKeywordSearch() {
         DeepSearchForegroundService.cancelSearch(getApplication())
+        com.example.util.NotificationHelper.cancelForegroundNotification(getApplication())
         _uiState.value = _uiState.value.copy(
             isKeywordSearching = false,
             statusMessage = "Keyword scan cancelled."
@@ -393,6 +394,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearKeywordSearchResults() {
         DeepSearchForegroundService.clearState()
+        com.example.util.NotificationHelper.cancelAllSearchNotifications(getApplication())
         _uiState.value = _uiState.value.copy(
             isKeywordSearching = false,
             keywordSearchResults = emptyList(),
@@ -475,10 +477,12 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     // --- File Preview and Item Actions ---
-    fun onSelectFileForPreview(item: FileSystemItem?) {
-        val target = if (_uiState.value.selectedItemForPreview?.path == item?.path) null else item
-        _uiState.value = _uiState.value.copy(selectedItemForPreview = target)
-        if (target == null) {
+    fun onSelectFileForPreview(item: FileSystemItem?, keywords: List<String> = emptyList()) {
+        _uiState.value = _uiState.value.copy(
+            selectedItemForPreview = item,
+            lastScannedKeywords = if (keywords.isNotEmpty()) keywords else _uiState.value.lastScannedKeywords
+        )
+        if (item == null) {
             audioManager.stop()
         }
     }

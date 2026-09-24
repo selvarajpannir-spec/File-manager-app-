@@ -94,6 +94,10 @@ data class FileUiState(
     val organizeFolderTargets: List<OrganizeFolderTarget> = emptyList(),
     // Dialogs & Previews
     val selectedItemForPreview: FileSystemItem? = null,
+    val itemForOpenFilePrompt: FileSystemItem? = null,
+    val openPromptKeywords: List<String> = emptyList(),
+    val itemForFullScreenViewer: FileSystemItem? = null,
+    val fullScreenKeywords: List<String> = emptyList(),
     val itemForTaggingSheet: FileSystemItem? = null,
     val itemForDetailsDialog: FileSystemItem? = null,
     val itemForRenameDialog: FileSystemItem? = null,
@@ -169,6 +173,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 if (sState.isRunning) {
                     _uiState.value = _uiState.value.copy(
                         isKeywordSearching = true,
+                        keywordSearchResults = sState.results,
                         keywordSearchScannedCount = sState.scannedCount,
                         keywordSearchFoundCount = sState.foundCount,
                         keywordSearchProgressPercent = sState.progressPercent,
@@ -476,6 +481,32 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         if (target == null) {
             audioManager.stop()
         }
+    }
+
+    fun openFileChoicePrompt(item: FileSystemItem, keywords: List<String> = emptyList()) {
+        _uiState.value = _uiState.value.copy(
+            itemForOpenFilePrompt = item,
+            openPromptKeywords = keywords
+        )
+    }
+
+    fun closeFileChoicePrompt() {
+        _uiState.value = _uiState.value.copy(itemForOpenFilePrompt = null)
+    }
+
+    fun openFullScreenViewer(item: FileSystemItem, keywords: List<String> = emptyList()) {
+        _uiState.value = _uiState.value.copy(
+            itemForFullScreenViewer = item,
+            fullScreenKeywords = keywords,
+            itemForOpenFilePrompt = null
+        )
+    }
+
+    fun closeFullScreenViewer() {
+        _uiState.value = _uiState.value.copy(
+            itemForFullScreenViewer = null,
+            fullScreenKeywords = emptyList()
+        )
     }
 
     fun openTagSheet(item: FileSystemItem) {

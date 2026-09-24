@@ -111,7 +111,9 @@ import com.example.ui.components.CreateFolderDialog
 import com.example.ui.components.FileDetailsDialog
 import com.example.ui.components.FileListItem
 import com.example.ui.components.FontSizeDialog
+import com.example.ui.components.FullScreenFileViewerDialog
 import com.example.ui.components.KeywordSearchTabContent
+import com.example.ui.components.OpenFilePromptDialog
 import com.example.ui.components.PermissionDialog
 import com.example.ui.components.RenameFileDialog
 import com.example.ui.components.TagChipItem
@@ -807,6 +809,53 @@ fun FileManagerScreen(
         )
     }
 
+    // Open File Choice Prompt Dialog (Internal vs External vs Top Preview)
+    if (uiState.itemForOpenFilePrompt != null) {
+        val item = uiState.itemForOpenFilePrompt!!
+        OpenFilePromptDialog(
+            item = item,
+            onOpenInternal = {
+                viewModel.openFullScreenViewer(item, uiState.openPromptKeywords)
+            },
+            onOpenExternal = {
+                openFileInExternalApp(context, item.file)
+                viewModel.closeFileChoicePrompt()
+            },
+            onOpenTopPreview = {
+                viewModel.onSelectFileForPreview(item)
+                viewModel.closeFileChoicePrompt()
+            },
+            onDismiss = {
+                viewModel.closeFileChoicePrompt()
+            }
+        )
+    }
+
+    // Full Screen In-App Viewer Dialog (Supports All Formats with Yellow Keyword Highlighting)
+    if (uiState.itemForFullScreenViewer != null) {
+        val item = uiState.itemForFullScreenViewer!!
+        FullScreenFileViewerDialog(
+            item = item,
+            initialKeywords = uiState.fullScreenKeywords,
+            audioState = audioState,
+            onTogglePlayAudio = { uri, id, title ->
+                viewModel.audioManager.togglePlayPause(uri, id, title)
+            },
+            onSeekAudio = { pos ->
+                viewModel.audioManager.seekTo(pos)
+            },
+            onOpenExternal = {
+                openFileInExternalApp(context, item.file)
+            },
+            onShare = {
+                shareFile(context, item.file)
+            },
+            onDismiss = {
+                viewModel.closeFullScreenViewer()
+            }
+        )
+    }
+
     // Auto Organize Files Dialog
     if (uiState.showAutoOrganizeDialog) {
         AutoOrganizeDialog(
@@ -844,7 +893,13 @@ fun BrowserTabContent(
         TopPreviewCard(
             item = uiState.selectedItemForPreview,
             audioState = audioState,
+            highlightKeywords = uiState.lastScannedKeywords,
             onClose = { viewModel.onSelectFileForPreview(null) },
+            onFullScreen = {
+                uiState.selectedItemForPreview?.let {
+                    viewModel.openFullScreenViewer(it, uiState.lastScannedKeywords)
+                }
+            },
             onAddTagClick = {
                 uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
             },
@@ -992,7 +1047,7 @@ fun BrowserTabContent(
                                 if (item.isDirectory) {
                                     viewModel.loadDirectory(item.path)
                                 } else {
-                                    viewModel.onSelectFileForPreview(item)
+                                    viewModel.openFileChoicePrompt(item)
                                 }
                             },
                             onAddTagClick = { viewModel.openTagSheet(item) },
@@ -1053,7 +1108,13 @@ fun TaggedFilesTabContent(
         TopPreviewCard(
             item = uiState.selectedItemForPreview,
             audioState = audioState,
+            highlightKeywords = uiState.lastScannedKeywords,
             onClose = { viewModel.onSelectFileForPreview(null) },
+            onFullScreen = {
+                uiState.selectedItemForPreview?.let {
+                    viewModel.openFullScreenViewer(it, uiState.lastScannedKeywords)
+                }
+            },
             onAddTagClick = {
                 uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
             },
@@ -1120,7 +1181,7 @@ fun TaggedFilesTabContent(
                                 viewModel.setActiveTab(FileExplorerTab.BROWSER)
                                 viewModel.loadDirectory(item.path)
                             } else {
-                                viewModel.onSelectFileForPreview(item)
+                                viewModel.openFileChoicePrompt(item)
                             }
                         },
                         onAddTagClick = { viewModel.openTagSheet(item) },

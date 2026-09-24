@@ -61,13 +61,15 @@ object StorageSearchScanner {
     /**
      * Recursively scans storage locations or directory for files matching any or all keywords.
      * Uses PDFBox for PDF text extraction and deep multi-format parsing.
+     * Streams each match via onMatchFound as soon as it is detected.
      */
     suspend fun searchStorage(
         context: Context,
         keywords: List<String>,
         rootPath: String? = null,
         matchAllKeywords: Boolean = false,
-        onProgress: ((scannedCount: Int, foundCount: Int) -> Unit)? = null
+        onProgress: ((scannedCount: Int, foundCount: Int) -> Unit)? = null,
+        onMatchFound: (suspend (SearchMatchResult) -> Unit)? = null
     ): List<SearchMatchResult> = withContext(Dispatchers.IO) {
         if (keywords.isEmpty()) return@withContext emptyList()
 
@@ -141,6 +143,7 @@ object StorageSearchScanner {
                         val match = inspectFileForKeywords(current, keywords, matchAllKeywords)
                         if (match != null && seenPaths.add(match.item.path)) {
                             results.add(match)
+                            onMatchFound?.invoke(match)
                             onProgress?.invoke(scannedCount, results.size)
                         }
                     } catch (e: Exception) {

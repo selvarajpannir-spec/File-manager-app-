@@ -177,17 +177,14 @@ jobs:
           echo "Attempt 1 failed. Logging output..."
           cp project/build_log.txt attempt1_log.txt 2>/dev/null || true
 
-          echo "=== Attempt 2: Direct assembleDebug in staged project ==="
-          if (cd project && gradle assembleDebug --stacktrace 2>&1 | tee -a build_log.txt); then
-            echo "Attempt 2 (Debug APK) succeeded!"
+          echo "=== Attempt 2: Direct assembleDebug assembleRelease in root project ==="
+          if gradle assembleDebug assembleRelease --stacktrace 2>&1 | tee root_build_log.txt; then
+            echo "Attempt 2 succeeded!"
             BUILD_SUCCESS=1
           else
-            echo "Attempt 2 failed. Trying direct root build..."
-            echo "=== Attempt 3: Direct root repository build ==="
-            if gradle assembleDebug --stacktrace 2>&1 | tee root_build_log.txt; then
-              echo "Attempt 3 (Root build) succeeded!"
-              mkdir -p project/app/build/outputs/apk/debug
-              cp app/build/outputs/apk/debug/*.apk project/app/build/outputs/apk/debug/ 2>/dev/null || true
+            echo "Attempt 2 failed. Trying fallback assembleDebug..."
+            if (cd project && gradle assembleDebug --stacktrace 2>&1 | tee -a build_log.txt); then
+              echo "Attempt 3 (Debug APK) succeeded!"
               BUILD_SUCCESS=1
             fi
           fi
@@ -198,19 +195,18 @@ jobs:
           exit 1
         fi
 
-        # Collect exactly ONE clean debug APK and ONE clean release APK into output_apks/
+        # Collect debug APK and unsigned release APK into output_apks/
         mkdir -p output_apks/debug output_apks/release
-        if ls project/app/build/outputs/apk/debug/*.apk 1>/dev/null 2>&1; then
-          cp -f $(ls project/app/build/outputs/apk/debug/*.apk | head -n 1) output_apks/debug/app-debug.apk
-        elif ls app/build/outputs/apk/debug/*.apk 1>/dev/null 2>&1; then
-          cp -f $(ls app/build/outputs/apk/debug/*.apk | head -n 1) output_apks/debug/app-debug.apk
-        fi
+        
+        # Debug APK
+        find project/app/build/outputs/apk/debug/ app/build/outputs/apk/debug/ -name "*.apk" 2>/dev/null | head -n 1 | while read apk_file; do
+          cp -f "$apk_file" output_apks/debug/app-debug.apk
+        done
 
-        if ls project/app/build/outputs/apk/release/*.apk 1>/dev/null 2>&1; then
-          cp -f $(ls project/app/build/outputs/apk/release/*.apk | head -n 1) output_apks/release/app-release.apk
-        elif ls app/build/outputs/apk/release/*.apk 1>/dev/null 2>&1; then
-          cp -f $(ls app/build/outputs/apk/release/*.apk | head -n 1) output_apks/release/app-release.apk
-        fi
+        # Release APK (Unsigned / Release)
+        find project/app/build/outputs/apk/release/ app/build/outputs/apk/release/ -name "*.apk" 2>/dev/null | head -n 1 | while read apk_file; do
+          cp -f "$apk_file" output_apks/release/app-release-unsigned.apk
+        done
 
     - name: Write error.md on failure
       if: failure()
@@ -230,18 +226,18 @@ jobs:
         name: error-log
         path: error.md
 
-    - name: Upload Debug APK
+    - name: Upload Debug APK (For Testing & Direct Mobile Installation)
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk
+        name: app-debug-apk
         path: output_apks/debug/app-debug.apk
         if-no-files-found: error
 
-    - name: Upload Release APK
+    - name: Upload Unsigned Release APK (For Play Store & Manual Signing)
       if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk
-        path: output_apks/release/app-release.apk
-        if-no-files-found: ignore
+        name: app-release-unsigned-apk
+        path: output_apks/release/app-release-unsigned.apk
+        if-no-files-found: warn

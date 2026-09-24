@@ -191,6 +191,18 @@ class DeepSearchForegroundService : Service() {
                             lastNotificationUpdateTime = now
                             updateProgressNotification(keywords, scanned, found, percent, cancelPendingIntent)
                         }
+                    },
+                    onMatchFound = { newMatch ->
+                        val currentList = _searchState.value.results
+                        val updated = if (currentList.none { it.item.path == newMatch.item.path }) {
+                            currentList + newMatch
+                        } else {
+                            currentList
+                        }
+                        _searchState.value = _searchState.value.copy(
+                            results = updated,
+                            foundCount = updated.size
+                        )
                     }
                 )
 

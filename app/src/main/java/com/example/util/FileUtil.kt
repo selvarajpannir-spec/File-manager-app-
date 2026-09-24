@@ -14,6 +14,8 @@ import android.os.ParcelFileDescriptor
 import android.os.StatFs
 import android.provider.OpenableColumns
 import android.util.Log
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -23,6 +25,8 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 import kotlin.math.log10
 import kotlin.math.pow
 
@@ -415,6 +419,43 @@ object FileUtil {
             }
         }
         return Pair(name, size)
+    }
+
+    fun extractPdfText(file: File, maxPages: Int = 15): String? {
+        return try {
+            PDDocument.load(file).use { doc ->
+                val stripper = PDFTextStripper()
+                val pages = minOf(doc.numberOfPages, maxPages)
+                stripper.startPage = 1
+                stripper.endPage = pages
+                stripper.getText(doc)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun readOfficeDocxText(file: File): String? {
+        return try {
+            val sb = StringBuilder()
+            val zis = ZipInputStream(FileInputStream(file))
+            var entry: ZipEntry? = zis.nextEntry
+            while (entry != null) {
+                if (entry.name.endsWith("document.xml") || entry.name.endsWith("sharedStrings.xml") || entry.name.endsWith("content.xml")) {
+                    val xml = zis.reader(Charsets.UTF_8).readText()
+                    val stripped = xml.replace(Regex("<[^>]*>"), " ")
+                        .replace(Regex("\\s+"), " ")
+                        .trim()
+                    sb.append(stripped).append("\n")
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+            zis.close()
+            if (sb.isNotEmpty()) sb.toString() else null
+        } catch (e: Exception) {
+            null
+        }
     }
 }
 

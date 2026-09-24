@@ -18,11 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -114,10 +115,10 @@ fun SearchMatchItem(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Name & Path
+                // Name & Path with Yellow Highlighting
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.name,
+                        text = buildHighlightedText(item.name, result.matchedKeywords),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -166,7 +167,7 @@ fun SearchMatchItem(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Instant Preview") },
+                                text = { Text("Open / Preview") },
                                 leadingIcon = { Icon(Icons.Default.Preview, contentDescription = null, Modifier.size(18.dp)) },
                                 onClick = {
                                     showMenu = false
@@ -183,7 +184,7 @@ fun SearchMatchItem(
                             )
                             DropdownMenuItem(
                                 text = { Text("Open in External App") },
-                                leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null, Modifier.size(18.dp)) },
+                                leadingIcon = { Icon(Icons.Default.OpenInNew, contentDescription = null, Modifier.size(18.dp)) },
                                 onClick = {
                                     showMenu = false
                                     onOpenWithSystem()
@@ -209,7 +210,7 @@ fun SearchMatchItem(
                 }
             }
 
-            // MATCHED KEYWORDS & SNIPPET EXCERPT
+            // MATCHED KEYWORDS ROW WITH YELLOW HIGHLIGHTS
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -219,7 +220,6 @@ fun SearchMatchItem(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Match type indicator
                 val matchLabel = when (result.matchType) {
                     MatchType.FILENAME -> "File name"
                     MatchType.CONTENT_TEXT -> "Text Content"
@@ -240,24 +240,25 @@ fun SearchMatchItem(
                     )
                 }
 
+                // Golden / Yellow Keyword Match Badges
                 result.matchedKeywords.forEach { kw ->
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                            .background(Color(0xFFFFEB3B))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "✓ $kw",
+                            text = "🔍 $kw",
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF059669)
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF000000)
                         )
                     }
                 }
             }
 
-            // Excerpt Snippet if available
+            // Excerpt Snippet with Yellow Keyword Highlighting
             result.snippet?.let { snippet ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Box(
@@ -269,12 +270,12 @@ fun SearchMatchItem(
                         .padding(6.dp)
                 ) {
                     Text(
-                        text = snippet,
+                        text = buildHighlightedText(snippet, result.matchedKeywords),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        lineHeight = 14.sp,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

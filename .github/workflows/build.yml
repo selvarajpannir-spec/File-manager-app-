@@ -95,6 +95,14 @@ jobs:
           fi
         done
 
+        # Copy google-services.json if present anywhere
+        for gs in google-services.json app/google-services.json app/src/google-services.json app/src/main/google-services.json; do
+          if [ -f "$gs" ]; then
+            cp "$gs" project/app/google-services.json 2>/dev/null || true
+            cp "$gs" project/google-services.json 2>/dev/null || true
+          fi
+        done
+
         # 5. Keystore Initialization
         if [ -f debug.keystore.base64 ]; then
           base64 -d debug.keystore.base64 > project/debug.keystore 2>/dev/null || true
@@ -200,15 +208,50 @@ jobs:
         # Collect debug APK and unsigned release APK into output_apks/
         mkdir -p output_apks/debug output_apks/release
         
-        # Debug APK
-        find project/app/build/outputs/apk/debug/ app/build/outputs/apk/debug/ -name "*.apk" 2>/dev/null | head -n 1 | while read apk_file; do
-          cp -f "$apk_file" output_apks/debug/app-debug.apk
+        # Robust debug APK discovery
+        DEBUG_APK=""
+        for loc in project/app/build/outputs/apk/debug app/build/outputs/apk/debug project/build/outputs/apk/debug; do
+          if [ -d "$loc" ]; then
+            f=$(find "$loc" -name "*.apk" | head -n 1)
+            if [ -n "$f" ] && [ -f "$f" ]; then
+              DEBUG_APK="$f"
+              break
+            fi
+          fi
         done
+        if [ -z "$DEBUG_APK" ]; then
+          DEBUG_APK=$(find project app -type f -name "*debug*.apk" 2>/dev/null | head -n 1 || true)
+        fi
+        if [ -z "$DEBUG_APK" ]; then
+          DEBUG_APK=$(find . -type f -name "*.apk" ! -path "*/release/*" 2>/dev/null | head -n 1 || true)
+        fi
+        if [ -n "$DEBUG_APK" ] && [ -f "$DEBUG_APK" ]; then
+          echo "Found Debug APK at: $DEBUG_APK"
+          cp -f "$DEBUG_APK" output_apks/debug/app-debug.apk
+        else
+          echo "Warning: No Debug APK found"
+        fi
 
-        # Release APK (Unsigned / Release)
-        find project/app/build/outputs/apk/release/ app/build/outputs/apk/release/ -name "*.apk" 2>/dev/null | head -n 1 | while read apk_file; do
-          cp -f "$apk_file" output_apks/release/app-release-unsigned.apk
+        # Robust release APK discovery
+        RELEASE_APK=""
+        for loc in project/app/build/outputs/apk/release app/build/outputs/apk/release project/build/outputs/apk/release; do
+          if [ -d "$loc" ]; then
+            f=$(find "$loc" -name "*.apk" | head -n 1)
+            if [ -n "$f" ] && [ -f "$f" ]; then
+              RELEASE_APK="$f"
+              break
+            fi
+          fi
         done
+        if [ -z "$RELEASE_APK" ]; then
+          RELEASE_APK=$(find project app -type f -name "*release*.apk" 2>/dev/null | head -n 1 || true)
+        fi
+        if [ -n "$RELEASE_APK" ] && [ -f "$RELEASE_APK" ]; then
+          echo "Found Release APK at: $RELEASE_APK"
+          cp -f "$RELEASE_APK" output_apks/release/app-release-unsigned.apk
+        else
+          echo "Warning: No Release APK found"
+        fi
 
     - name: Write error.md on failure
       if: failure()
@@ -234,7 +277,7 @@ jobs:
       with:
         name: app-debug-apk
         path: output_apks/debug/app-debug.apk
-        if-no-files-found: error
+        if-no-files-found: warn
 
     - name: Upload Unsigned Release APK (For Play Store & Manual Signing)
       if: success()

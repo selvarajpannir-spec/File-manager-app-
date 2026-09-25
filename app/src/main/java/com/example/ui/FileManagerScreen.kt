@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
@@ -61,6 +62,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewList
@@ -151,6 +153,7 @@ fun FileManagerScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showToolsMenu by remember { mutableStateOf(false) }
+    var isSearchFileNameOpen by remember { mutableStateOf(false) }
 
     // Check permissions on resume
     LaunchedEffect(Unit) {
@@ -184,7 +187,7 @@ fun FileManagerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            // SINGLE UNIFIED NAVIGATION BAR (Consolidates 4 previous bars into 1 compact bar with dropdowns)
+            // SINGLE UNIFIED NAVIGATION BAR (Consolidates 4 previous bars into 1 compact bar with dropdowns & search lens)
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 3.dp,
@@ -192,72 +195,145 @@ fun FileManagerScreen(
                     .fillMaxWidth()
                     .testTag("single_unified_nav_bar")
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Left Section: Up Button + Path / Tab Title
+                if (isSearchFileNameOpen) {
+                    // INLINE SEARCH FILE NAME MODE
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
                             onClick = {
-                                if (uiState.activeTab != FileExplorerTab.BROWSER) {
-                                    viewModel.setActiveTab(FileExplorerTab.BROWSER)
-                                } else {
-                                    viewModel.navigateUp()
-                                }
+                                isSearchFileNameOpen = false
+                                viewModel.onSearchQueryChanged("")
                             },
-                            modifier = Modifier.size(36.dp).testTag("nav_up_button")
+                            modifier = Modifier.size(36.dp).testTag("nav_search_close_btn")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowUpward,
-                                contentDescription = "Parent directory",
-                                modifier = Modifier.size(20.dp),
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Close search",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
 
-                        if (uiState.activeTab == FileExplorerTab.BROWSER) {
-                            BreadcrumbPathBar(
-                                currentPath = uiState.currentPath,
-                                onSegmentClick = { path ->
-                                    viewModel.loadDirectory(path)
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                        } else {
-                            val tabTitle = when (uiState.activeTab) {
-                                FileExplorerTab.KEYWORD_SEARCH -> "🔍 Deep Keyword Search"
-                                FileExplorerTab.TAGGED_FILES -> "🏷️ Tagged Files"
-                                FileExplorerTab.STORAGE_INFO -> "📊 Storage Partitions"
-                                else -> "📁 File Explorer"
-                            }
-                            Text(
-                                text = tabTitle,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { viewModel.setActiveTab(FileExplorerTab.BROWSER) }
-                            )
-                        }
+                        androidx.compose.material3.OutlinedTextField(
+                            value = uiState.searchQuery,
+                            onValueChange = { viewModel.onSearchQueryChanged(it) },
+                            placeholder = { Text("Search file name...", fontSize = 13.sp) },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (uiState.searchQuery.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { viewModel.onSearchQueryChanged("") },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear text",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp)
+                                .testTag("nav_search_filename_input"),
+                            shape = RoundedCornerShape(10.dp)
+                        )
                     }
-
-                    // Right Section: 4 Compact Dropdown Action Menus
+                } else {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // 1. STORAGE DROPDOWN (📂 Storage)
+                        // Left Section: Up Button + Path / Tab Title
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (uiState.activeTab != FileExplorerTab.BROWSER) {
+                                        viewModel.setActiveTab(FileExplorerTab.BROWSER)
+                                    } else {
+                                        viewModel.navigateUp()
+                                    }
+                                },
+                                modifier = Modifier.size(36.dp).testTag("nav_up_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowUpward,
+                                    contentDescription = "Parent directory",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            if (uiState.activeTab == FileExplorerTab.BROWSER) {
+                                BreadcrumbPathBar(
+                                    currentPath = uiState.currentPath,
+                                    onSegmentClick = { path ->
+                                        viewModel.loadDirectory(path)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                val tabTitle = when (uiState.activeTab) {
+                                    FileExplorerTab.KEYWORD_SEARCH -> "🔍 Deep Keyword Search"
+                                    FileExplorerTab.TAGGED_FILES -> "🏷️ Tagged Files"
+                                    FileExplorerTab.STORAGE_INFO -> "📊 Storage Partitions"
+                                    else -> "📁 File Explorer"
+                                }
+                                Text(
+                                    text = tabTitle,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.setActiveTab(FileExplorerTab.BROWSER) }
+                                )
+                            }
+                        }
+
+                        // Right Section: Search Lens + 4 Action Menus
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            // 🔍 SEARCH FILE NAME LENS BUTTON
+                            IconButton(
+                                onClick = { isSearchFileNameOpen = true },
+                                modifier = Modifier.size(36.dp).testTag("nav_search_filename_lens_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search file name",
+                                    tint = if (uiState.searchQuery.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            // 1. STORAGE DROPDOWN (📂 Storage)
                         Box {
                             IconButton(
                                 onClick = { showStorageMenu = true },
@@ -559,6 +635,7 @@ fun FileManagerScreen(
                 }
             }
         }
+    }
     ) { innerPadding ->
         Column(
             modifier = Modifier

@@ -209,22 +209,7 @@ jobs:
         mkdir -p output_apks/debug output_apks/release
         
         # Robust debug APK discovery
-        DEBUG_APK=""
-        for loc in project/app/build/outputs/apk/debug app/build/outputs/apk/debug project/build/outputs/apk/debug; do
-          if [ -d "$loc" ]; then
-            f=$(find "$loc" -name "*.apk" | head -n 1)
-            if [ -n "$f" ] && [ -f "$f" ]; then
-              DEBUG_APK="$f"
-              break
-            fi
-          fi
-        done
-        if [ -z "$DEBUG_APK" ]; then
-          DEBUG_APK=$(find project app -type f -name "*debug*.apk" 2>/dev/null | head -n 1 || true)
-        fi
-        if [ -z "$DEBUG_APK" ]; then
-          DEBUG_APK=$(find . -type f -name "*.apk" ! -path "*/release/*" 2>/dev/null | head -n 1 || true)
-        fi
+        DEBUG_APK=$(find project/app/build/outputs/apk/debug app/build/outputs/apk/debug project/build/outputs/apk/debug project app . -type f -name "*debug*.apk" 2>/dev/null | head -n 1 || true)
         if [ -n "$DEBUG_APK" ] && [ -f "$DEBUG_APK" ]; then
           echo "Found Debug APK at: $DEBUG_APK"
           cp -f "$DEBUG_APK" output_apks/debug/app-debug.apk
@@ -233,19 +218,7 @@ jobs:
         fi
 
         # Robust release APK discovery
-        RELEASE_APK=""
-        for loc in project/app/build/outputs/apk/release app/build/outputs/apk/release project/build/outputs/apk/release; do
-          if [ -d "$loc" ]; then
-            f=$(find "$loc" -name "*.apk" | head -n 1)
-            if [ -n "$f" ] && [ -f "$f" ]; then
-              RELEASE_APK="$f"
-              break
-            fi
-          fi
-        done
-        if [ -z "$RELEASE_APK" ]; then
-          RELEASE_APK=$(find project app -type f -name "*release*.apk" 2>/dev/null | head -n 1 || true)
-        fi
+        RELEASE_APK=$(find project/app/build/outputs/apk/release app/build/outputs/apk/release project/build/outputs/apk/release project app . -type f \( -name "*release*.apk" -o -name "*unsigned*.apk" \) 2>/dev/null | head -n 1 || true)
         if [ -n "$RELEASE_APK" ] && [ -f "$RELEASE_APK" ]; then
           echo "Found Release APK at: $RELEASE_APK"
           cp -f "$RELEASE_APK" output_apks/release/app-release-unsigned.apk

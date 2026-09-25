@@ -128,14 +128,14 @@ class MainActivity : ComponentActivity() {
                             }
 
                             BackHandler(enabled = true) {
-                                val handled = viewModel.navigateBack()
-                                if (!handled) {
-                                    val currentTime = System.currentTimeMillis()
-                                    if (currentTime - lastBackPressTime < 2000L) {
-                                        // Double tap on back button directly leads to exit confirmation window
-                                        showExitConfirmDialog = true
-                                    } else {
-                                        lastBackPressTime = currentTime
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastBackPressTime < 2000L) {
+                                    // Double tap on back button anywhere in app -> open exit confirmation window directly
+                                    showExitConfirmDialog = true
+                                } else {
+                                    lastBackPressTime = currentTime
+                                    val handled = viewModel.navigateBack()
+                                    if (!handled) {
                                         Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
                                     }
                                 }

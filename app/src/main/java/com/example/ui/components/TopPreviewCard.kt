@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -113,7 +114,7 @@ fun TopPreviewCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
             .testTag("top_preview_card"),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -123,8 +124,8 @@ fun TopPreviewCard(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             // Header row: Compact Title + Actions
             Row(
@@ -221,13 +222,13 @@ fun TopPreviewCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
 
-            // Interactive Content Preview Box - Tap prompts user for Open Internal / External
+            // Interactive Content Preview Box - Takes full remaining space inside the 40% card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false)
+                    .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                     .clickable { onPreviewClick() },
@@ -310,7 +311,7 @@ fun CompactCodeTextPreview(file: File, keywords: List<String>) {
         textSnippet = withContext(Dispatchers.IO) {
             try {
                 file.useLines { lines ->
-                    lines.take(3).joinToString("\n")
+                    lines.take(20).joinToString("\n")
                 }
             } catch (e: Exception) {
                 "Text preview unavailable"
@@ -320,21 +321,19 @@ fun CompactCodeTextPreview(file: File, keywords: List<String>) {
     }
 
     if (isLoading) {
-        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
     } else {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .fillMaxSize()
+                .padding(8.dp)
         ) {
             Text(
                 text = buildHighlightedText(textSnippet ?: "Empty file", keywords),
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                lineHeight = 13.sp,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -355,53 +354,45 @@ fun CompactPdfPreview(uri: Uri, onFullScreen: () -> Unit) {
         isLoading = false
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap!!.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.PictureAsPdf,
-                    contentDescription = null,
-                    tint = Color(0xFFE11D48),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column {
-                Text(
-                    text = "PDF Document Ready",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Tap to view full document & yellow keyword search",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Text(
-            text = "View",
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp
+    if (isLoading) {
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+    } else if (bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = "PDF Page 1",
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+                .clip(RoundedCornerShape(6.dp)),
+            contentScale = ContentScale.Fit
         )
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PictureAsPdf,
+                contentDescription = null,
+                tint = Color(0xFFE11D48),
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "PDF Document Ready",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Tap to view full document & yellow keyword search",
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -414,9 +405,7 @@ fun CompactImagePreview(uri: Uri) {
             .crossfade(true)
             .build(),
         contentDescription = "Image Preview",
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(70.dp),
+        modifier = Modifier.fillMaxSize(),
         contentScale = ContentScale.Fit
     )
 }
@@ -434,47 +423,69 @@ fun CompactAudioPreview(
     val currentMs = if (audioState.currentFileId == fileId) audioState.currentPositionMs else 0L
     val durationMs = if (audioState.currentFileId == fileId && audioState.durationMs > 0) audioState.durationMs else 180000L
 
-    Row(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        IconButton(
-            onClick = onTogglePlay,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.size(32.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Icon(
-                imageVector = if (isThisPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isThisPlaying) "Pause" else "Play",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(18.dp)
-            )
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(42.dp)
+            ) {
+                IconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = if (isThisPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isThisPlaying) "Pause" else "Play",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = fileName,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (isThisPlaying) "Playing Audio..." else "Tap play or scrub track",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Slider(
-                value = currentMs.toFloat(),
-                onValueChange = { onSeek(it.toLong()) },
-                valueRange = 0f..durationMs.toFloat(),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.fillMaxWidth().height(20.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = FileUtil.formatDuration(currentMs), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(text = FileUtil.formatDuration(durationMs), fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        Slider(
+            value = currentMs.toFloat(),
+            onValueChange = { onSeek(it.toLong()) },
+            valueRange = 0f..durationMs.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.fillMaxWidth().height(22.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = FileUtil.formatDuration(currentMs), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = FileUtil.formatDuration(durationMs), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -484,31 +495,40 @@ fun CompactHexPreview(file: File) {
     var hexContent by remember(file.absolutePath) { mutableStateOf<String?>(null) }
     LaunchedEffect(file.absolutePath) {
         hexContent = withContext(Dispatchers.IO) {
-            FileUtil.generateHexDump(file, maxBytes = 64)
+            FileUtil.generateHexDump(file, maxBytes = 128)
         }
     }
-    Text(
-        text = hexContent ?: "ELF/Binary data",
-        style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
-        fontSize = 9.sp,
-        lineHeight = 11.sp,
-        maxLines = 2,
-        modifier = Modifier.padding(6.dp)
-    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp)
+    ) {
+        Text(
+            text = hexContent ?: "ELF/Binary data",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            lineHeight = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
 }
 
 @Composable
 fun CompactFolderPreview(item: FileSystemItem) {
-    Row(
-        modifier = Modifier.padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Folder, contentDescription = null, tint = Color(0xFFEAB308), modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(6.dp))
+        Icon(Icons.Default.Folder, contentDescription = null, tint = Color(0xFFEAB308), modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "${item.childCount ?: 0} items inside • Tap to enter folder",
             fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -530,56 +550,39 @@ fun CompactVideoPreview(file: File, uri: Uri, onFullScreen: () -> Unit) {
         }
     }
 
-    Row(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .fillMaxSize()
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF0284C7)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Video Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = "Video (${file.extension.uppercase(Locale.ROOT)})",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (durationStr != null) "Duration: $durationStr • Tap to play / open" else "Tap preview to play inside app or open in player",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF0284C7)),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Play",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = "Video Play",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
             )
         }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "Video Media (${file.extension.uppercase(Locale.ROOT)})",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = if (durationStr != null) "Length: $durationStr • Tap to Play" else "Tap preview to play inside app or open in external player",
+            style = MaterialTheme.typography.bodySmall,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -595,18 +598,18 @@ fun CompactOfficePreview(file: File, keywords: List<String>, onFullScreen: () ->
         snippetText = withContext(Dispatchers.IO) {
             try {
                 if (isSpreadsheet) {
-                    val table = FileUtil.readOfficeXlsxTable(file, maxRows = 3, maxCols = 4)
+                    val table = FileUtil.readOfficeXlsxTable(file, maxRows = 6, maxCols = 5)
                     if (table.isNotEmpty()) {
                         table.joinToString("\n") { row -> row.filter { it.isNotBlank() }.joinToString(" | ") }
                     } else {
-                        "Spreadsheet document ready"
+                        "Spreadsheet Document Ready"
                     }
                 } else {
                     val paragraphs = FileUtil.readOfficeDocxParagraphs(file)
                     if (paragraphs.isNotEmpty()) {
-                        paragraphs.take(2).joinToString("\n")
+                        paragraphs.take(8).joinToString("\n")
                     } else {
-                        "Word document ready"
+                        "Word Document Ready"
                     }
                 }
             } catch (e: Exception) {
@@ -616,68 +619,66 @@ fun CompactOfficePreview(file: File, keywords: List<String>, onFullScreen: () ->
         isLoading = false
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+    if (isLoading) {
+        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB)),
-                contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = if (isSpreadsheet) Icons.Default.TableChart else Icons.Default.Description,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isSpreadsheet) Icons.Default.TableChart else Icons.Default.Description,
+                        contentDescription = null,
+                        tint = if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isSpreadsheet) "Spreadsheet (${ext.uppercase(Locale.ROOT)})" else "Document (${ext.uppercase(Locale.ROOT)})",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB)
+                    )
+                }
                 Text(
-                    text = if (isSpreadsheet) "Spreadsheet (${ext.uppercase(Locale.ROOT)})" else "Document (${ext.uppercase(Locale.ROOT)})",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB)
-                )
-                Text(
-                    text = snippetText ?: "Tap to read inside app or open in external app",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Tap to Open",
+                    style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = buildHighlightedText(snippetText ?: "Document ready", keywords),
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
-
-        Text(
-            text = "Read",
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(start = 4.dp)
-        )
     }
 }
 
 @Composable
 fun CompactGenericPreview(item: FileSystemItem, onFullScreen: () -> Unit) {
-    Row(
-        modifier = Modifier.padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(6.dp))
+        Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "${item.formattedSize} • Tap for In-App Reader",
             fontSize = 11.sp,

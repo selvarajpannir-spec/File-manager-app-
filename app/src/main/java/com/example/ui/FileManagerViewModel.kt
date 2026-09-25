@@ -159,7 +159,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             storageLocations = locations,
             storageStats = stats,
             hasStoragePermission = hasPerm,
-            showPermissionPromptDialog = !hasPerm
+            showPermissionPromptDialog = false
         )
 
         viewModelScope.launch {

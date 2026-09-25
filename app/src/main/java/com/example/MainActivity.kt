@@ -40,6 +40,19 @@ class MainActivity : ComponentActivity() {
     private lateinit var appSettings: AppSettings
     private var pendingTargetTab: String? = null
     private var activeViewModel: FileManagerViewModel? = null
+    private var hasPromptedStorageOnOpen = false
+
+    private val manageAllFilesLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        activeViewModel?.refreshStoragePermission(this)
+    }
+
+    private val legacyStorageLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        activeViewModel?.refreshStoragePermission(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,11 +88,16 @@ class MainActivity : ComponentActivity() {
                             SplashScreen(
                                 onSplashComplete = {
                                     showSplash = false
+                                    checkAndLeadToStoragePermission()
                                 }
                             )
                         } else {
                             val viewModel: FileManagerViewModel = viewModel()
                             activeViewModel = viewModel
+
+                            LaunchedEffect(Unit) {
+                                checkAndLeadToStoragePermission()
+                            }
 
                             // If app was opened via notification, switch directly to KEYWORD_SEARCH tab
                             LaunchedEffect(pendingTargetTab) {
@@ -120,13 +138,46 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        checkAndPromptAllFilesPermission()
+        activeViewModel?.refreshStoragePermission(this)
     }
 
-    private fun checkAndPromptAllFilesPermission() {
+    /**
+     * Checks if storage permission is granted when opening the app.
+     * If not granted, leads directly to permission access.
+     */
+    private fun checkAndLeadToStoragePermission() {
+        if (hasPromptedStorageOnOpen) return
+        hasPromptedStorageOnOpen = true
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
-                // Verified via in-app banner & dialog
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    manageAllFilesLauncher.launch(intent)
+                } catch (e: Exception) {
+                    try {
+                        val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                        manageAllFilesLauncher.launch(intent)
+                    } catch (_: Exception) {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        manageAllFilesLauncher.launch(intent)
+                    }
+                }
+            }
+        } else {
+            val permissions = arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            val needed = permissions.filter {
+                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (needed.isNotEmpty()) {
+                legacyStorageLauncher.launch(needed.toTypedArray())
             }
         }
     }

@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -101,6 +103,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 import java.util.zip.ZipFile
+
+import android.widget.MediaController
+import android.widget.VideoView
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.VideoFile
+import androidx.compose.ui.viewinterop.AndroidView
 
 /**
  * Builds an AnnotatedString that highlights all occurrences of keywords with a bright yellow background.
@@ -330,14 +340,18 @@ fun FullScreenFileViewerDialog(
                         .fillMaxSize()
                         .weight(1f)
                 ) {
-                    when (category) {
-                        FileCategory.IMAGE -> {
+                    val ext = item.file.extension.lowercase(Locale.ROOT)
+                    when {
+                        category == FileCategory.IMAGE -> {
                             FullScreenImageViewer(uri = uri)
                         }
-                        FileCategory.PDF -> {
+                        category == FileCategory.VIDEO -> {
+                            FullScreenVideoViewer(file = item.file, uri = uri, onOpenExternal = onOpenExternal)
+                        }
+                        category == FileCategory.PDF -> {
                             FullScreenPdfViewer(file = item.file, uri = uri, keywords = effectiveKeywords)
                         }
-                        FileCategory.AUDIO -> {
+                        category == FileCategory.AUDIO -> {
                             FullScreenAudioViewer(
                                 item = item,
                                 uri = uri,
@@ -346,13 +360,19 @@ fun FullScreenFileViewerDialog(
                                 onSeek = onSeekAudio
                             )
                         }
-                        FileCategory.TEXT, FileCategory.CODE, FileCategory.DOCUMENT -> {
+                        ext in listOf("xlsx", "xls", "csv", "tsv", "ods") -> {
+                            FullScreenSpreadsheetViewer(file = item.file, keywords = effectiveKeywords, onOpenExternal = onOpenExternal)
+                        }
+                        ext in listOf("docx", "doc", "odt", "rtf", "pptx") -> {
+                            FullScreenDocumentViewer(file = item.file, keywords = effectiveKeywords, onOpenExternal = onOpenExternal)
+                        }
+                        category == FileCategory.TEXT || category == FileCategory.CODE -> {
                             FullScreenTextViewer(file = item.file, keywords = effectiveKeywords)
                         }
-                        FileCategory.ARCHIVE -> {
+                        category == FileCategory.ARCHIVE -> {
                             FullScreenArchiveViewer(file = item.file, keywords = effectiveKeywords)
                         }
-                        FileCategory.SYSTEM_BINARY, FileCategory.OTHER -> {
+                        category == FileCategory.SYSTEM_BINARY || category == FileCategory.OTHER -> {
                             FullScreenHexViewer(file = item.file, keywords = effectiveKeywords)
                         }
                         else -> {
@@ -837,6 +857,382 @@ fun FullScreenHexViewer(file: File, keywords: List<String>) {
                 fontSize = 10.sp,
                 lineHeight = 13.sp
             )
+        }
+    }
+}
+
+@Composable
+fun FullScreenVideoViewer(
+    file: File,
+    uri: Uri,
+    onOpenExternal: () -> Unit
+) {
+    val context = LocalContext.current
+    var isError by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isError) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VideoFile,
+                    contentDescription = null,
+                    tint = Color(0xFFF43F5E),
+                    modifier = Modifier.size(56.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Cannot play video codec internally",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "This video container/codec (${file.extension.uppercase(Locale.ROOT)}) requires a dedicated external player (e.g. VLC or Google Photos).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF94A3B8),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.material3.Button(
+                    onClick = onOpenExternal,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open in External Video Player")
+                }
+            }
+        } else {
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        val mc = MediaController(ctx)
+                        mc.setAnchorView(this)
+                        setMediaController(mc)
+                        setOnErrorListener { _, _, _ ->
+                            isError = true
+                            true
+                        }
+                        if (uri.scheme == "file") {
+                            setVideoPath(file.absolutePath)
+                        } else {
+                            setVideoURI(uri)
+                        }
+                        start()
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun FullScreenSpreadsheetViewer(
+    file: File,
+    keywords: List<String>,
+    onOpenExternal: () -> Unit
+) {
+    var tableData by remember(file.absolutePath) { mutableStateOf<List<List<String>>>(emptyList()) }
+    var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+    var errorMessage by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(file.absolutePath) {
+        isLoading = true
+        errorMessage = null
+        try {
+            tableData = withContext(Dispatchers.IO) {
+                if (file.extension.equals("csv", ignoreCase = true) || file.extension.equals("tsv", ignoreCase = true)) {
+                    FileUtil.readCsvTable(file, maxRows = 200)
+                } else {
+                    FileUtil.readOfficeXlsxTable(file, maxRows = 200, maxCols = 30)
+                }
+            }
+            if (tableData.isEmpty()) {
+                errorMessage = "No spreadsheet cells found or unsupported format."
+            }
+        } catch (e: Exception) {
+            errorMessage = e.message
+        }
+        isLoading = false
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (tableData.isEmpty() || errorMessage != null) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.TableChart,
+                contentDescription = null,
+                tint = Color(0xFF16A34A),
+                modifier = Modifier.size(54.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Spreadsheet (${file.extension.uppercase(Locale.ROOT)})",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = errorMessage ?: "Could not parse worksheet xml internally.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.material3.Button(onClick = onOpenExternal) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Open in External Sheets / Excel App")
+            }
+        }
+    } else {
+        val colCount = remember(tableData) { tableData.maxOfOrNull { it.size } ?: 1 }
+        val horizontalScrollState = rememberScrollState()
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header stats & fallback banner
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📊 ${tableData.size} rows • $colCount columns",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF15803D)
+                    )
+                    Text(
+                        text = "External Open ↗",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onOpenExternal() }
+                    )
+                }
+            }
+
+            // Interactive 2D Spreadsheet Grid
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(horizontalScrollState)
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Column Letters Header Row (A, B, C, D...)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(vertical = 4.dp)
+                        ) {
+                            // Empty corner box for row index
+                            Box(
+                                modifier = Modifier
+                                    .width(42.dp)
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("#", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                            }
+                            for (c in 0 until colCount) {
+                                val colName = if (c < 26) ('A' + c).toString() else "C${c + 1}"
+                                Box(
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .padding(horizontal = 4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = colName,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Data Rows
+                    items(tableData.size) { rIdx ->
+                        val rowCells = tableData[rIdx]
+                        val isEven = rIdx % 2 == 0
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (isEven) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Row number
+                            Box(
+                                modifier = Modifier
+                                    .width(42.dp)
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${rIdx + 1}",
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+
+                            // Row cells
+                            for (c in 0 until colCount) {
+                                val cellVal = rowCells.getOrNull(c) ?: ""
+                                Box(
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = buildHighlightedText(cellVal, keywords),
+                                        fontSize = 11.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FullScreenDocumentViewer(
+    file: File,
+    keywords: List<String>,
+    onOpenExternal: () -> Unit
+) {
+    var paragraphs by remember(file.absolutePath) { mutableStateOf<List<String>>(emptyList()) }
+    var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+
+    LaunchedEffect(file.absolutePath) {
+        isLoading = true
+        paragraphs = withContext(Dispatchers.IO) {
+            try {
+                FileUtil.readOfficeDocxParagraphs(file)
+            } catch (e: Exception) {
+                listOf("Could not parse document: ${e.message}")
+            }
+        }
+        isLoading = false
+    }
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (paragraphs.isEmpty()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(54.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            Text("Word Document (${file.extension.uppercase(Locale.ROOT)})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("This document can be opened in Microsoft Word / Google Docs / Office Reader.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(modifier = Modifier.height(16.dp))
+            androidx.compose.material3.Button(onClick = onOpenExternal) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Open in External Word / Office App")
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📄 ${paragraphs.size} paragraphs extracted",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Open in Office App ↗",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { onOpenExternal() }
+                        )
+                    }
+                }
+            }
+
+            items(paragraphs.size) { pIdx ->
+                val para = paragraphs[pIdx]
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = buildHighlightedText(para, keywords),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(10.dp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 }

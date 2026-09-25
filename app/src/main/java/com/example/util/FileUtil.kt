@@ -436,26 +436,169 @@ object FileUtil {
     }
 
     fun readOfficeDocxText(file: File): String? {
-        return try {
-            val sb = StringBuilder()
+        val paragraphs = readOfficeDocxParagraphs(file)
+        return if (paragraphs.isNotEmpty()) paragraphs.joinToString("\n\n") else null
+    }
+
+    /**
+     * Parses a Word (.docx) document into structured paragraph blocks.
+     */
+    fun readOfficeDocxParagraphs(file: File): List<String> {
+        val paragraphs = mutableListOf<String>()
+        try {
             val zis = ZipInputStream(FileInputStream(file))
             var entry: ZipEntry? = zis.nextEntry
             while (entry != null) {
-                if (entry.name.endsWith("document.xml") || entry.name.endsWith("sharedStrings.xml") || entry.name.endsWith("content.xml")) {
+                if (entry.name.equals("word/document.xml", ignoreCase = true) || entry.name.endsWith("document.xml")) {
                     val xml = zis.reader(Charsets.UTF_8).readText()
-                    val stripped = xml.replace(Regex("<[^>]*>"), " ")
-                        .replace(Regex("\\s+"), " ")
-                        .trim()
-                    sb.append(stripped).append("\n")
+                    // Extract all <w:p>...</w:p> paragraph nodes
+                    val pRegex = Regex("<w:p[ >](.*?)</w:p>", RegexOption.DOT_MATCHES_ALL)
+                    val pMatches = pRegex.findAll(xml)
+                    for (pMatch in pMatches) {
+                        val pContent = pMatch.value
+                        // Extract text nodes <w:t>...</w:t>
+                        val tRegex = Regex("<w:t[^>]*>(.*?)</w:t>")
+                        val pText = tRegex.findAll(pContent)
+                            .map { it.groupValues[1] }
+                            .joinToString("")
+                            .replace("&amp;", "&")
+                            .replace("&lt;", "<")
+                            .replace("&gt;", ">")
+                            .replace("&quot;", "\"")
+                            .replace("&apos;", "'")
+                            .trim()
+                        if (pText.isNotEmpty()) {
+                            paragraphs.add(pText)
+                        }
+                    }
+                    if (paragraphs.isEmpty()) {
+                        // Fallback: strip XML tags
+                        val fallback = xml.replace(Regex("<[^>]*>"), " ")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
+                        if (fallback.isNotEmpty()) paragraphs.add(fallback)
+                    }
                 }
                 zis.closeEntry()
                 entry = zis.nextEntry
             }
             zis.close()
-            if (sb.isNotEmpty()) sb.toString() else null
         } catch (e: Exception) {
-            null
+            Log.w(TAG, "Error parsing docx: ${e.message}")
         }
+        return paragraphs
+    }
+
+    /**
+     * Parses an Excel (.xlsx) spreadsheet into a 2D table grid (List of Rows).
+     */
+    fun readOfficeXlsxTable(file: File, maxRows: Int = 100, maxCols: Int = 26): List<List<String>> {
+        val rows = mutableListOf<List<String>>()
+        try {
+            val sharedStrings = mutableListOf<String>()
+            var sheetXml: String? = null
+
+            // Pass 1: Extract shared strings and primary sheet
+            val zis1 = ZipInputStream(FileInputStream(file))
+            var entry1: ZipEntry? = zis1.nextEntry
+            while (entry1 != null) {
+                val name = entry1.name.lowercase(Locale.ROOT)
+                if (name.endsWith("sharedstrings.xml")) {
+                    val xml = zis1.reader(Charsets.UTF_8).readText()
+                    // Extract <si><t>...</t></si> or standalone <t>
+                    val tRegex = Regex("<t[^>]*>(.*?)</t>", RegexOption.DOT_MATCHES_ALL)
+                    tRegex.findAll(xml).forEach {
+                        val str = it.groupValues[1]
+                            .replace("&amp;", "&")
+                            .replace("&lt;", "<")
+                            .replace("&gt;", ">")
+                            .replace("&quot;", "\"")
+                        sharedStrings.add(str)
+                    }
+                } else if (sheetXml == null && (name.contains("worksheets/sheet1.xml") || (name.contains("sheet") && name.endsWith(".xml")))) {
+                    sheetXml = zis1.reader(Charsets.UTF_8).readText()
+                }
+                zis1.closeEntry()
+                entry1 = zis1.nextEntry
+            }
+            zis1.close()
+
+            if (sheetXml != null) {
+                // Parse rows: <row r="1"> ... <c r="A1" t="s"><v>0</v></c> ... </row>
+                val rowRegex = Regex("<row[^>]*>(.*?)</row>", RegexOption.DOT_MATCHES_ALL)
+                val rowMatches = rowRegex.findAll(sheetXml)
+
+                for (rMatch in rowMatches.take(maxRows)) {
+                    val rContent = rMatch.value
+                    val cRegex = Regex("<c r=\"([A-Z]+)[0-9]+\"(?:[^>]*?t=\"([a-z]+)\")?[^>]*>(?:<v>(.*?)</v>)?(?:<is><t>(.*?)</t></is>)?</c>", RegexOption.DOT_MATCHES_ALL)
+                    val cMatches = cRegex.findAll(rContent).toList()
+
+                    val rowCells = mutableListOf<String>()
+                    var lastColIdx = -1
+
+                    for (cMatch in cMatches.take(maxCols)) {
+                        val colLetters = cMatch.groupValues[1]
+                        val cellType = cMatch.groupValues[2]
+                        val valContent = cMatch.groupValues[3]
+                        val inlineText = cMatch.groupValues[4]
+
+                        // Convert column letters (A, B, C...) to index (0, 1, 2...)
+                        var colIdx = 0
+                        for (ch in colLetters) {
+                            colIdx = colIdx * 26 + (ch - 'A' + 1)
+                        }
+                        colIdx -= 1
+
+                        // Fill in blank cells between columns
+                        while (lastColIdx + 1 < colIdx && rowCells.size < maxCols) {
+                            rowCells.add("")
+                            lastColIdx++
+                        }
+
+                        val cellValue = when {
+                            inlineText.isNotEmpty() -> inlineText
+                            cellType == "s" -> {
+                                val idx = valContent.toIntOrNull() ?: -1
+                                if (idx in 0 until sharedStrings.size) sharedStrings[idx] else valContent
+                            }
+                            cellType == "b" -> if (valContent == "1") "TRUE" else "FALSE"
+                            else -> valContent
+                        }
+
+                        rowCells.add(cellValue.trim())
+                        lastColIdx = colIdx
+                    }
+
+                    if (rowCells.any { it.isNotBlank() }) {
+                        rows.add(rowCells)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error parsing xlsx table: ${e.message}")
+        }
+        return rows
+    }
+
+    /**
+     * Parses a CSV or TSV file into a 2D table grid.
+     */
+    fun readCsvTable(file: File, maxRows: Int = 100): List<List<String>> {
+        val rows = mutableListOf<List<String>>()
+        try {
+            val delimiter = if (file.extension.equals("tsv", ignoreCase = true)) "\t" else ","
+            file.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                for (line in lines.take(maxRows)) {
+                    if (line.isNotBlank()) {
+                        val cells = line.split(delimiter).map { it.trim().removeSurrounding("\"") }
+                        rows.add(cells)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error parsing csv: ${e.message}")
+        }
+        return rows
     }
 }
 

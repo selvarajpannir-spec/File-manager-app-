@@ -40,25 +40,40 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.R
+import com.example.util.StorageSearchScanner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Intro Splash Scene for Files+
  * App Icon starts at 1/10th (0.10) screen display width and smoothly grows to 1/5th (0.20) screen display width
  * over the 3-second (3000ms) intro duration before launching the main file manager.
+ * Background preparations (PDFBox, storage cache warmup) run concurrently on Dispatchers.IO.
  */
 @Composable
 fun SplashScreen(
     onSplashComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     // Animation progress from 0f to 1f over exactly 3000ms
     val iconScaleFraction = remember { Animatable(0.10f) } // Starts at 1/10 screen width (0.10)
     val textAlpha = remember { Animatable(0f) }
     val loadProgress = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
+        // Run background app preparation on IO thread during the intro
+        launch(Dispatchers.IO) {
+            try {
+                StorageSearchScanner.initPdfBoxIfNeeded(context.applicationContext)
+            } catch (e: Exception) {
+                // Ignore background preparation errors
+            }
+        }
+
         // 1. Icon growth animation from 1/10 (0.10) to 1/5 (0.20) of screen width over 3000ms
         launch {
             iconScaleFraction.animateTo(

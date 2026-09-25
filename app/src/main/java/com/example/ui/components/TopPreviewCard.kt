@@ -79,9 +79,14 @@ import com.example.util.FileUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Locale
+
+import androidx.compose.material.icons.filled.VideoFile
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Description
 
 /**
- * Minimized top preview card to maximize vertical space for at least 5+ items in the file list.
+ * Top preview card sized cleanly for the ~40% display area.
  */
 @Composable
 fun TopPreviewCard(
@@ -97,183 +102,225 @@ fun TopPreviewCard(
     onSeekAudio: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    AnimatedVisibility(
-        visible = item != null,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically(),
-        modifier = modifier
-    ) {
-        if (item != null) {
-            val category = item.category
-            val categoryColor = getCategoryColor(category)
-            val uri = remember(item.path) { Uri.fromFile(item.file) }
-
-            Card(
+    if (item == null) {
+        // Placeholder when no file is selected
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .testTag("top_preview_placeholder_card"),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            )
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                    .testTag("top_preview_card"),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.Fullscreen,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "File Preview Area (40%)",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Tap any file from the list below to preview it here instantly",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    val category = item.category
+    val categoryColor = getCategoryColor(category)
+    val uri = remember(item.path) { Uri.fromFile(item.file) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .testTag("top_preview_card"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            // Header row: Compact Title + Actions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    // Header row: Compact Title + Actions
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = categoryColor.copy(alpha = 0.15f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            text = category.name,
+                            color = categoryColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onPreviewClick,
+                        modifier = Modifier.size(28.dp).testTag("top_preview_fullscreen_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Fullscreen,
+                            contentDescription = "Open File Options",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    if (!item.isDirectory) {
+                        IconButton(
+                            onClick = onShare,
+                            modifier = Modifier.size(28.dp)
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = categoryColor.copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = category.name,
-                                    color = categoryColor,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                modifier = Modifier.size(15.dp)
                             )
                         }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = onPreviewClick,
-                                modifier = Modifier.size(28.dp).testTag("top_preview_fullscreen_btn")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Fullscreen,
-                                    contentDescription = "Open File Options",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            if (!item.isDirectory) {
-                                IconButton(
-                                    onClick = onShare,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Share,
-                                        contentDescription = "Share",
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = onOpenExternal,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                        contentDescription = "Open in External App",
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            }
-                            IconButton(
-                                onClick = onClose,
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close preview",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                        IconButton(
+                            onClick = onOpenExternal,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = "Open in External App",
+                                modifier = Modifier.size(15.dp)
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Streamlined Compact Content Preview (Max ~65-75dp height) - Tap prompts user for Open Internal / External
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 50.dp, max = 75.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                            .clickable { onPreviewClick() },
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(28.dp)
                     ) {
-                        when (category) {
-                            FileCategory.PDF -> {
-                                CompactPdfPreview(uri = uri, onFullScreen = onPreviewClick)
-                            }
-                            FileCategory.IMAGE -> {
-                                CompactImagePreview(uri = uri)
-                            }
-                            FileCategory.AUDIO -> {
-                                CompactAudioPreview(
-                                    fileId = item.dbFileId ?: item.path.hashCode().toLong(),
-                                    fileName = item.name,
-                                    uri = uri,
-                                    audioState = audioState,
-                                    onTogglePlay = { onTogglePlayAudio(uri, item.dbFileId ?: item.path.hashCode().toLong(), item.name) },
-                                    onSeek = onSeekAudio
-                                )
-                            }
-                            FileCategory.TEXT, FileCategory.CODE, FileCategory.DOCUMENT -> {
-                                CompactCodeTextPreview(file = item.file, keywords = highlightKeywords)
-                            }
-                            FileCategory.SYSTEM_BINARY -> {
-                                CompactHexPreview(file = item.file)
-                            }
-                            FileCategory.FOLDER -> {
-                                CompactFolderPreview(item = item)
-                            }
-                            else -> {
-                                CompactGenericPreview(item = item, onFullScreen = onPreviewClick)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(3.dp))
-
-                    // Bottom info line
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = if (item.isDirectory) item.permissions else "${item.formattedSize} • ${item.permissions}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 10.sp
-                        )
-
-                        Text(
-                            text = "Tap preview to Open (In-App / External) →",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 10.sp,
-                            modifier = Modifier.clickable { onPreviewClick() }
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close preview",
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Interactive Content Preview Box - Tap prompts user for Open Internal / External
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                    .clickable { onPreviewClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                when (category) {
+                    FileCategory.PDF -> {
+                        CompactPdfPreview(uri = uri, onFullScreen = onPreviewClick)
+                    }
+                    FileCategory.IMAGE -> {
+                        CompactImagePreview(uri = uri)
+                    }
+                    FileCategory.VIDEO -> {
+                        CompactVideoPreview(file = item.file, uri = uri, onFullScreen = onPreviewClick)
+                    }
+                    FileCategory.AUDIO -> {
+                        CompactAudioPreview(
+                            fileId = item.dbFileId ?: item.path.hashCode().toLong(),
+                            fileName = item.name,
+                            uri = uri,
+                            audioState = audioState,
+                            onTogglePlay = { onTogglePlayAudio(uri, item.dbFileId ?: item.path.hashCode().toLong(), item.name) },
+                            onSeek = onSeekAudio
+                        )
+                    }
+                    FileCategory.DOCUMENT -> {
+                        CompactOfficePreview(file = item.file, keywords = highlightKeywords, onFullScreen = onPreviewClick)
+                    }
+                    FileCategory.TEXT, FileCategory.CODE -> {
+                        CompactCodeTextPreview(file = item.file, keywords = highlightKeywords)
+                    }
+                    FileCategory.SYSTEM_BINARY -> {
+                        CompactHexPreview(file = item.file)
+                    }
+                    FileCategory.FOLDER -> {
+                        CompactFolderPreview(item = item)
+                    }
+                    else -> {
+                        CompactGenericPreview(item = item, onFullScreen = onPreviewClick)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(3.dp))
+
+            // Bottom info line
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (item.isDirectory) item.permissions else "${item.formattedSize} • ${item.permissions}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+
+                Text(
+                    text = "Tap preview area to Open (Internal / External) →",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    modifier = Modifier.clickable { onPreviewClick() }
+                )
             }
         }
     }
@@ -489,6 +536,162 @@ fun CompactFolderPreview(item: FileSystemItem) {
             text = "${item.childCount ?: 0} items inside • Tap to enter folder",
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun CompactVideoPreview(file: File, uri: Uri, onFullScreen: () -> Unit) {
+    val context = LocalContext.current
+    var durationStr by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(file.absolutePath) {
+        withContext(Dispatchers.IO) {
+            try {
+                val meta = FileUtil.extractAudioMetadata(context, uri)
+                if (meta.durationMs > 0) {
+                    durationStr = FileUtil.formatDuration(meta.durationMs)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF0284C7)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Video Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = "Video (${file.extension.uppercase(Locale.ROOT)})",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (durationStr != null) "Duration: $durationStr • Tap to play / open" else "Tap preview to play inside app or open in player",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Text(
+                text = "Play",
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactOfficePreview(file: File, keywords: List<String>, onFullScreen: () -> Unit) {
+    val ext = file.extension.lowercase(Locale.ROOT)
+    val isSpreadsheet = ext in listOf("xlsx", "xls", "csv", "tsv", "ods")
+    var snippetText by remember(file.absolutePath) { mutableStateOf<String?>(null) }
+    var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+
+    LaunchedEffect(file.absolutePath) {
+        isLoading = true
+        snippetText = withContext(Dispatchers.IO) {
+            try {
+                if (isSpreadsheet) {
+                    val table = FileUtil.readOfficeXlsxTable(file, maxRows = 3, maxCols = 4)
+                    if (table.isNotEmpty()) {
+                        table.joinToString("\n") { row -> row.filter { it.isNotBlank() }.joinToString(" | ") }
+                    } else {
+                        "Spreadsheet document ready"
+                    }
+                } else {
+                    val paragraphs = FileUtil.readOfficeDocxParagraphs(file)
+                    if (paragraphs.isNotEmpty()) {
+                        paragraphs.take(2).joinToString("\n")
+                    } else {
+                        "Word document ready"
+                    }
+                }
+            } catch (e: Exception) {
+                "Document preview ready"
+            }
+        }
+        isLoading = false
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isSpreadsheet) Icons.Default.TableChart else Icons.Default.Description,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isSpreadsheet) "Spreadsheet (${ext.uppercase(Locale.ROOT)})" else "Document (${ext.uppercase(Locale.ROOT)})",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSpreadsheet) Color(0xFF16A34A) else Color(0xFF2563EB)
+                )
+                Text(
+                    text = snippetText ?: "Tap to read inside app or open in external app",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 10.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Text(
+            text = "Read",
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(start = 4.dp)
         )
     }
 }

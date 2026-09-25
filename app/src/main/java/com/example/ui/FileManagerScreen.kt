@@ -145,10 +145,10 @@ fun FileManagerScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val fontScale by viewModel.fontScale.collectAsStateWithLifecycle()
 
-    var showOverflowMenu by remember { mutableStateOf(false) }
-    var showSortSubMenu by remember { mutableStateOf(false) }
-    var showLocationsSubMenu by remember { mutableStateOf(false) }
-    var showFabMenu by remember { mutableStateOf(false) }
+    var showStorageMenu by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
+    var showToolsMenu by remember { mutableStateOf(false) }
 
     // Check permissions on resume
     LaunchedEffect(Unit) {
@@ -182,16 +182,35 @@ fun FileManagerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = {
+            // SINGLE UNIFIED NAVIGATION BAR (Consolidates 4 previous bars into 1 compact bar with dropdowns)
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("single_unified_nav_bar")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Left Section: Up Button + Path / Tab Title
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f)
                     ) {
-                        // Up Button
                         IconButton(
-                            onClick = { viewModel.navigateUp() },
-                            modifier = Modifier.size(36.dp)
+                            onClick = {
+                                if (uiState.activeTab != FileExplorerTab.BROWSER) {
+                                    viewModel.setActiveTab(FileExplorerTab.BROWSER)
+                                } else {
+                                    viewModel.navigateUp()
+                                }
+                            },
+                            modifier = Modifier.size(36.dp).testTag("nav_up_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ArrowUpward,
@@ -203,400 +222,336 @@ fun FileManagerScreen(
 
                         Spacer(modifier = Modifier.width(4.dp))
 
-                        // Path Breadcrumbs
-                        BreadcrumbPathBar(
-                            currentPath = uiState.currentPath,
-                            onSegmentClick = { path ->
-                                viewModel.setActiveTab(FileExplorerTab.BROWSER)
-                                viewModel.loadDirectory(path)
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                },
-                actions = {
-                    // 3-DOT MENU DRAWER (Contains all top bar items + Auto Organize)
-                    Box {
-                        IconButton(
-                            onClick = { showOverflowMenu = true },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .testTag("top_bar_overflow_menu_btn")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Options menu",
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.onSurface
+                        if (uiState.activeTab == FileExplorerTab.BROWSER) {
+                            BreadcrumbPathBar(
+                                currentPath = uiState.currentPath,
+                                onSegmentClick = { path ->
+                                    viewModel.loadDirectory(path)
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        } else {
+                            val tabTitle = when (uiState.activeTab) {
+                                FileExplorerTab.KEYWORD_SEARCH -> "🔍 Deep Keyword Search"
+                                FileExplorerTab.TAGGED_FILES -> "🏷️ Tagged Files"
+                                FileExplorerTab.STORAGE_INFO -> "📊 Storage Partitions"
+                                else -> "📁 File Explorer"
+                            }
+                            Text(
+                                text = tabTitle,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setActiveTab(FileExplorerTab.BROWSER) }
                             )
                         }
+                    }
 
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = {
-                                showOverflowMenu = false
-                                showSortSubMenu = false
-                                showLocationsSubMenu = false
-                            },
-                            modifier = Modifier.width(260.dp)
-                        ) {
-                            // 1. AUTO ORGANIZE FILES (HIGHLIGHTED FEATURE)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Column {
+                    // Right Section: 4 Compact Dropdown Action Menus
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // 1. STORAGE DROPDOWN (📂 Storage)
+                        Box {
+                            IconButton(
+                                onClick = { showStorageMenu = true },
+                                modifier = Modifier.size(36.dp).testTag("nav_storage_dropdown_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Storage,
+                                    contentDescription = "Storage Partitions",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showStorageMenu,
+                                onDismissRequest = { showStorageMenu = false },
+                                modifier = Modifier.width(240.dp)
+                            ) {
+                                Text(
+                                    text = "Select Storage Partition",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                HorizontalDivider()
+                                uiState.storageLocations.forEach { loc ->
+                                    DropdownMenuItem(
+                                        text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "Auto Organize",
-                                                    fontWeight = FontWeight.Bold,
-                                                    style = MaterialTheme.typography.bodyMedium
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Surface(
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    shape = RoundedCornerShape(4.dp)
-                                                ) {
+                                                Text(loc.iconEmoji, fontSize = 16.sp)
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
                                                     Text(
-                                                        text = "NEW",
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                        fontSize = 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        text = loc.title,
+                                                        fontSize = 13.sp,
+                                                        fontWeight = if (uiState.currentPath == loc.path) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                    Text(
+                                                        text = loc.path,
+                                                        fontSize = 10.sp,
+                                                        fontFamily = FontFamily.Monospace,
+                                                        color = MaterialTheme.colorScheme.outline
                                                     )
                                                 }
                                             }
-                                            Text(
-                                                text = "Sort files into category folders",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                        },
+                                        onClick = {
+                                            showStorageMenu = false
+                                            viewModel.setActiveTab(FileExplorerTab.BROWSER)
+                                            viewModel.loadDirectory(loc.path)
                                         }
-                                    }
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.openAutoOrganizeDialog()
-                                },
-                                modifier = Modifier.testTag("menu_auto_organize_item")
-                            )
+                                    )
+                                }
+                            }
+                        }
 
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            // 2. THEME TOGGLE (☀️ / 🌙)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = if (themeMode == ThemeMode.DARK) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                            contentDescription = null,
-                                            tint = if (themeMode == ThemeMode.DARK) Color(0xFFFBBF24) else MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = if (themeMode == ThemeMode.DARK) "Light Theme (☀️)" else "Dark Theme (🌙)",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.toggleTheme()
-                                },
-                                modifier = Modifier.testTag("menu_theme_toggle_item")
-                            )
-
-                            // 3. FONT SIZE ADJUSTMENT (🔤)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.FormatSize,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text(
-                                            text = "Font Size (${fontScale.displayName})",
-                                            style = MaterialTheme.typography.bodyMedium
+                        // 2. FILTER & TAGS DROPDOWN (🏷️ Filter)
+                        val hasActiveFilters = uiState.searchQuery.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()
+                        Box {
+                            IconButton(
+                                onClick = { showFilterDialog = true },
+                                modifier = Modifier.size(36.dp).testTag("nav_filter_dropdown_btn")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Label,
+                                        contentDescription = "Filter & Search",
+                                        tint = if (hasActiveFilters) Color(0xFFE11D48) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    if (hasActiveFilters) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFE11D48))
+                                                .align(Alignment.TopEnd)
                                         )
                                     }
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.openFontSizeDialog()
-                                },
-                                modifier = Modifier.testTag("menu_font_size_item")
-                            )
+                                }
+                            }
+                        }
 
-                            // 4. TOGGLE HIDDEN FILES (👁️)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = if (uiState.showHiddenFiles) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                            contentDescription = null,
-                                            tint = if (uiState.showHiddenFiles) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
+                        // 3. SORT DROPDOWN (🔃 Sort)
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.size(36.dp).testTag("nav_sort_dropdown_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = "Sort Files",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false },
+                                modifier = Modifier.width(220.dp)
+                            ) {
+                                Text(
+                                    text = "Sort Order",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                HorizontalDivider()
+                                SortMode.entries.forEach { mode ->
+                                    val label = when (mode) {
+                                        SortMode.NAME_ASC -> "Name (A to Z)"
+                                        SortMode.NAME_DESC -> "Name (Z to A)"
+                                        SortMode.DATE_DESC -> "Date (Newest first)"
+                                        SortMode.DATE_ASC -> "Date (Oldest first)"
+                                        SortMode.SIZE_DESC -> "Size (Largest first)"
+                                        SortMode.SIZE_ASC -> "Size (Smallest first)"
+                                        SortMode.TYPE -> "Type / Extension"
+                                    }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = label,
+                                                fontSize = 13.sp,
+                                                fontWeight = if (uiState.sortMode == mode) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (uiState.sortMode == mode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            viewModel.setSortMode(mode)
+                                            showSortMenu = false
+                                        }
+                                    )
+                                }
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = {
                                         Text(
                                             text = if (uiState.showHiddenFiles) "Hide Hidden Files" else "Show Hidden Files",
-                                            style = MaterialTheme.typography.bodyMedium
+                                            fontSize = 13.sp
                                         )
-                                    }
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.toggleShowHiddenFiles()
-                                },
-                                modifier = Modifier.testTag("menu_hidden_files_item")
-                            )
-
-                            // 5. SORT FILES SUBMENU
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.Sort,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text("Sort Files", style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = if (showSortSubMenu) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showSortSubMenu = !showSortSubMenu
-                                    showLocationsSubMenu = false
-                                }
-                            )
-
-                            if (showSortSubMenu) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Column {
-                                        SortMode.entries.forEach { mode ->
-                                            val label = when (mode) {
-                                                SortMode.NAME_ASC -> "Name (A to Z)"
-                                                SortMode.NAME_DESC -> "Name (Z to A)"
-                                                SortMode.DATE_DESC -> "Date (Newest first)"
-                                                SortMode.DATE_ASC -> "Date (Oldest first)"
-                                                SortMode.SIZE_DESC -> "Size (Largest first)"
-                                                SortMode.SIZE_ASC -> "Size (Smallest first)"
-                                                SortMode.TYPE -> "Type / Extension"
-                                            }
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        text = label,
-                                                        fontSize = 12.sp,
-                                                        fontWeight = if (uiState.sortMode == mode) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (uiState.sortMode == mode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                },
-                                                onClick = {
-                                                    viewModel.setSortMode(mode)
-                                                    showOverflowMenu = false
-                                                    showSortSubMenu = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // 6. STORAGE LOCATIONS SUBMENU
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Storage,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text("Storage Partitions", style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = if (showLocationsSubMenu) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showLocationsSubMenu = !showLocationsSubMenu
-                                    showSortSubMenu = false
-                                }
-                            )
-
-                            if (showLocationsSubMenu) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Column {
-                                        uiState.storageLocations.forEach { loc ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Text(loc.iconEmoji, fontSize = 14.sp)
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text(loc.title, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                                    }
-                                                },
-                                                onClick = {
-                                                    showOverflowMenu = false
-                                                    showLocationsSubMenu = false
-                                                    viewModel.setActiveTab(FileExplorerTab.BROWSER)
-                                                    viewModel.loadDirectory(loc.path)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            // 7. REFRESH DIRECTORY (🔄)
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Text("Refresh", style = MaterialTheme.typography.bodyMedium)
-                                    }
-                                },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.refreshCurrentDirectory()
-                                },
-                                modifier = Modifier.testTag("menu_refresh_item")
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp
-            ) {
-                NavigationBarItem(
-                    selected = uiState.activeTab == FileExplorerTab.BROWSER,
-                    onClick = { viewModel.setActiveTab(FileExplorerTab.BROWSER) },
-                    icon = { Icon(Icons.Default.Folder, contentDescription = "Explorer") },
-                    label = { Text("Explorer") }
-                )
-                NavigationBarItem(
-                    selected = uiState.activeTab == FileExplorerTab.KEYWORD_SEARCH,
-                    onClick = { viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ManageSearch, contentDescription = "Keyword Search") },
-                    label = { Text("Keywords") }
-                )
-                NavigationBarItem(
-                    selected = uiState.activeTab == FileExplorerTab.TAGGED_FILES,
-                    onClick = { viewModel.setActiveTab(FileExplorerTab.TAGGED_FILES) },
-                    icon = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tagged Files") },
-                    label = { Text("Tags") }
-                )
-                NavigationBarItem(
-                    selected = uiState.activeTab == FileExplorerTab.STORAGE_INFO,
-                    onClick = { viewModel.setActiveTab(FileExplorerTab.STORAGE_INFO) },
-                    icon = { Icon(Icons.Default.PieChart, contentDescription = "Storage Stats") },
-                    label = { Text("Partitions") }
-                )
-            }
-        },
-        floatingActionButton = {
-            if (uiState.activeTab == FileExplorerTab.BROWSER) {
-                Column(horizontalAlignment = Alignment.End) {
-                    if (showFabMenu) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 6.dp,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                TextButton(
+                                    },
                                     onClick = {
-                                        showFabMenu = false
+                                        viewModel.toggleShowHiddenFiles()
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
+
+                        // 4. TOOLS & TABS MENU (⋮ Menu)
+                        Box {
+                            IconButton(
+                                onClick = { showToolsMenu = true },
+                                modifier = Modifier.size(36.dp).testTag("nav_tools_menu_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Tools & Navigation",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showToolsMenu,
+                                onDismissRequest = { showToolsMenu = false },
+                                modifier = Modifier.width(260.dp)
+                            ) {
+                                // Tab Switchers
+                                Text(
+                                    text = "Navigation & Views",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text("📁 File Explorer", fontWeight = if (uiState.activeTab == FileExplorerTab.BROWSER) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.setActiveTab(FileExplorerTab.BROWSER)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("🔍 Deep Keyword Search", fontWeight = if (uiState.activeTab == FileExplorerTab.KEYWORD_SEARCH) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("🏷️ Tagged Files", fontWeight = if (uiState.activeTab == FileExplorerTab.TAGGED_FILES) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.setActiveTab(FileExplorerTab.TAGGED_FILES)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("📊 Storage Partitions Stats", fontWeight = if (uiState.activeTab == FileExplorerTab.STORAGE_INFO) FontWeight.Bold else FontWeight.Normal) },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.setActiveTab(FileExplorerTab.STORAGE_INFO)
+                                    }
+                                )
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                // Actions
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Auto Organize Files", fontWeight = FontWeight.Bold)
+                                        }
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.openAutoOrganizeDialog()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("New Folder")
+                                        }
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
                                         viewModel.openCreateFolderDialog()
                                     }
-                                ) {
-                                    Icon(Icons.Default.CreateNewFolder, contentDescription = null, Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("New Folder")
-                                }
-                                TextButton(
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("New Text File")
+                                        }
+                                    },
                                     onClick = {
-                                        showFabMenu = false
+                                        showToolsMenu = false
                                         viewModel.openCreateFileDialog()
                                     }
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null, Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("New Text File")
-                                }
-                                TextButton(
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Import via SAF")
+                                        }
+                                    },
                                     onClick = {
-                                        showFabMenu = false
+                                        showToolsMenu = false
                                         docPickerLauncher.launch(arrayOf("*/*"))
                                     }
-                                ) {
-                                    Icon(Icons.Default.FileOpen, contentDescription = null, Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Import via SAF")
-                                }
+                                )
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                // Settings
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(if (themeMode == ThemeMode.DARK) "☀️ Light Theme" else "🌙 Dark Theme")
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.toggleTheme()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("🔤 Font Size (${fontScale.displayName})")
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.openFontSizeDialog()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("🔄 Refresh Directory")
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        viewModel.refreshCurrentDirectory()
+                                    }
+                                )
                             }
                         }
-                    }
-
-                    FloatingActionButton(
-                        onClick = { showFabMenu = !showFabMenu },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.testTag("main_action_fab")
-                    ) {
-                        Icon(
-                            imageVector = if (showFabMenu) Icons.Default.Folder else Icons.Default.Add,
-                            contentDescription = "Actions"
-                        )
                     }
                 }
             }
@@ -662,7 +617,7 @@ fun FileManagerScreen(
                 }
             }
 
-            // BACKGROUND SCAN ACTIVE MINI-BANNER (Shown across other tabs if scan is running)
+            // BACKGROUND SCAN ACTIVE MINI-BANNER
             if (uiState.isKeywordSearching && uiState.activeTab != FileExplorerTab.KEYWORD_SEARCH) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -694,6 +649,61 @@ fun FileManagerScreen(
                         )
                     }
                 }
+            }
+
+            // Filter Dialog Popup
+            if (showFilterDialog) {
+                val hasActive = uiState.searchQuery.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()
+                AlertDialog(
+                    onDismissRequest = { showFilterDialog = false },
+                    title = {
+                        Text("Search & Tag Filters", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    },
+                    text = {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                                placeholder = { Text("Filter files by name...") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text("Filter by Tag:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                allTags.forEach { tag ->
+                                    val isSelected = uiState.selectedTagFilterIds.contains(tag.tagId)
+                                    androidx.compose.material3.FilterChip(
+                                        selected = isSelected,
+                                        onClick = { viewModel.onTagFilterToggled(tag.tagId) },
+                                        label = { Text("#${tag.tagName}", fontSize = 12.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showFilterDialog = false }) {
+                            Text("Done")
+                        }
+                    },
+                    dismissButton = {
+                        if (hasActive) {
+                            TextButton(onClick = {
+                                viewModel.onClearTagFilters()
+                                showFilterDialog = false
+                            }) {
+                                Text("Clear All")
+                            }
+                        }
+                    }
+                )
             }
 
             // Tabs Content
@@ -888,177 +898,133 @@ fun BrowserTabContent(
     context: Context
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // TOP PREVIEW CARD
-        TopPreviewCard(
-            item = uiState.selectedItemForPreview,
-            audioState = audioState,
-            highlightKeywords = uiState.lastScannedKeywords,
-            onClose = { viewModel.onSelectFileForPreview(null) },
-            onPreviewClick = {
-                uiState.selectedItemForPreview?.let {
-                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
-                }
-            },
-            onAddTagClick = {
-                uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
-            },
-            onOpenExternal = {
-                uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
-            },
-            onShare = {
-                uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
-            },
-            onTogglePlayAudio = { uri, id, title ->
-                viewModel.audioManager.togglePlayPause(uri, id, title)
-            },
-            onSeekAudio = { pos ->
-                viewModel.audioManager.seekTo(pos)
-            }
-        )
-
-        // FAST FILE NAME & TAG FILTER HEADER
-        TagFilterHeader(
-            searchQuery = uiState.searchQuery,
-            onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-            allTags = allTags,
-            selectedTagIds = uiState.selectedTagFilterIds,
-            onToggleTagFilter = { viewModel.onTagFilterToggled(it) },
-            onClearFilters = { viewModel.onClearTagFilters() },
-            totalCount = uiState.currentItems.size,
-            onOpenKeywordSearch = { viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH) }
-        )
-
-        // QUICK STORAGE CHIPS
-        Row(
+        // 1. PREVIEW SPACE: 40% OF SCREEN HEIGHT
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .weight(0.40f)
+                .padding(bottom = 2.dp)
+                .testTag("preview_40_percent_container"),
+            contentAlignment = Alignment.Center
         ) {
-            uiState.storageLocations.take(6).forEach { loc ->
-                val isCurrent = uiState.currentPath == loc.path
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.clickable { viewModel.loadDirectory(loc.path) }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(loc.iconEmoji, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = loc.title,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            TopPreviewCard(
+                item = uiState.selectedItemForPreview,
+                audioState = audioState,
+                highlightKeywords = uiState.lastScannedKeywords,
+                onClose = { viewModel.onSelectFileForPreview(null) },
+                onPreviewClick = {
+                    uiState.selectedItemForPreview?.let {
+                        viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
                     }
-                }
-            }
+                },
+                onAddTagClick = {
+                    uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
+                },
+                onOpenExternal = {
+                    uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
+                },
+                onShare = {
+                    uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
+                },
+                onTogglePlayAudio = { uri, id, title ->
+                    viewModel.audioManager.togglePlayPause(uri, id, title)
+                },
+                onSeekAudio = { pos ->
+                    viewModel.audioManager.seekTo(pos)
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         }
 
-        // DIRECTORY SUMMARY ROW
-        Row(
+        // 2. FILE LIST: 40% OF SCREEN HEIGHT
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .weight(0.40f)
+                .testTag("file_list_40_percent_container")
         ) {
-            val count = uiState.currentItems.size
-            val isSystem = FileUtil.isSystemPath(uiState.currentPath)
-
-            Text(
-                text = "$count items ${if (isSystem) "• System Partition" else ""}",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isSystem) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isSystem) FontWeight.Bold else FontWeight.Normal
-            )
-
-            Text(
-                text = uiState.sortMode.name.replace("_", " "),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-        }
-
-        // LOADING OR FILE LIST
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(32.dp))
-            }
-        } else {
-            val query = uiState.searchQuery.lowercase(Locale.ROOT)
-            val filteredItems = uiState.currentItems.filter { item ->
-                val matchesQuery = query.isEmpty() || item.name.lowercase(Locale.ROOT).contains(query)
-                val matchesTag = uiState.selectedTagFilterIds.isEmpty() || item.tags.any { it.tagId in uiState.selectedTagFilterIds }
-                matchesQuery && matchesTag
-            }
-
-            if (filteredItems.isEmpty()) {
+            if (uiState.isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outlineVariant,
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = if (query.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()) {
-                                "No items in this directory match your criteria."
-                            } else {
-                                "This directory is empty or protected."
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("file_list_lazy_column"),
-                    contentPadding = PaddingValues(bottom = 96.dp, top = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    items(filteredItems, key = { it.path }) { item ->
-                        FileListItem(
-                            item = item,
-                            isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
-                            onClick = {
-                                if (item.isDirectory) {
-                                    viewModel.loadDirectory(item.path)
+                val query = uiState.searchQuery.lowercase(Locale.ROOT)
+                val filteredItems = uiState.currentItems.filter { item ->
+                    val matchesQuery = query.isEmpty() || item.name.lowercase(Locale.ROOT).contains(query)
+                    val matchesTag = uiState.selectedTagFilterIds.isEmpty() || item.tags.any { it.tagId in uiState.selectedTagFilterIds }
+                    matchesQuery && matchesTag
+                }
+
+                if (filteredItems.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (query.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()) {
+                                    "No items match your criteria."
                                 } else {
-                                    viewModel.onSelectFileForPreview(item)
-                                }
-                            },
-                            onAddTagClick = { viewModel.openTagSheet(item) },
-                            onOpenWithSystem = { openFileInExternalApp(context, item.file) },
-                            onShare = { shareFile(context, item.file) },
-                            onRename = { viewModel.openRenameDialog(item) },
-                            onShowDetails = { viewModel.openDetailsDialog(item) },
-                            onDelete = { viewModel.deleteItem(item) }
-                        )
+                                    "Directory empty or protected."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("file_list_lazy_column"),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        items(filteredItems, key = { it.path }) { item ->
+                            FileListItem(
+                                item = item,
+                                isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
+                                onClick = {
+                                    if (item.isDirectory) {
+                                        viewModel.loadDirectory(item.path)
+                                    } else {
+                                        viewModel.onSelectFileForPreview(item)
+                                    }
+                                },
+                                onAddTagClick = { viewModel.openTagSheet(item) },
+                                onOpenWithSystem = { openFileInExternalApp(context, item.file) },
+                                onShare = { shareFile(context, item.file) },
+                                onRename = { viewModel.openRenameDialog(item) },
+                                onShowDetails = { viewModel.openDetailsDialog(item) },
+                                onDelete = { viewModel.deleteItem(item) }
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        // 3. ADMOB BANNER AD PLACEHOLDER: 10% OF SCREEN HEIGHT (FOR FUTURE ADMOB)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.10f)
+                .testTag("admob_banner_placeholder_container")
+        ) {
+            AdMobBannerPlaceholder()
         }
     }
 }
@@ -1441,5 +1407,73 @@ fun shareFile(context: Context, file: File) {
         context.startActivity(Intent.createChooser(intent, "Share file"))
     } catch (e: Exception) {
         Toast.makeText(context, "Cannot share file: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * AdMob Banner placeholder (occupying ~10% screen height) reserved for future AdMob banner ads.
+ */
+@Composable
+fun AdMobBannerPlaceholder(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFFF59E0B)
+                ) {
+                    Text(
+                        text = "Ad",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Files+ High Performance Storage",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "AdMob Banner Ad Slot • 320x50 / Adaptive Ready",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = "Files+ ⚡",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
     }
 }

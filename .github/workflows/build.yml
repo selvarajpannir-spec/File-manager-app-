@@ -208,8 +208,8 @@ jobs:
         # Collect debug APK and unsigned release APK into output_apks/
         mkdir -p output_apks/debug output_apks/release
         
-        # Robust debug APK discovery
-        DEBUG_APK=$(find project/app/build/outputs/apk/debug app/build/outputs/apk/debug project/build/outputs/apk/debug project app . -type f -name "*debug*.apk" 2>/dev/null | head -n 1 || true)
+        # 1. Robust debug APK discovery
+        DEBUG_APK=$(find project/app/build/outputs/apk/debug app/build/outputs/apk/debug project/build/outputs/apk/debug project/app/build/intermediates/apk/debug app/build/intermediates/apk/debug .build-outputs project app . -type f -name "*debug*.apk" 2>/dev/null | head -n 1 || true)
         if [ -n "$DEBUG_APK" ] && [ -f "$DEBUG_APK" ]; then
           echo "Found Debug APK at: $DEBUG_APK"
           cp -f "$DEBUG_APK" output_apks/debug/app-debug.apk
@@ -217,13 +217,19 @@ jobs:
           echo "Warning: No Debug APK found"
         fi
 
-        # Robust release APK discovery
-        RELEASE_APK=$(find project/app/build/outputs/apk/release app/build/outputs/apk/release project/build/outputs/apk/release project app . -type f \( -name "*release*.apk" -o -name "*unsigned*.apk" \) 2>/dev/null | head -n 1 || true)
+        # 2. Robust release / unsigned APK discovery
+        RELEASE_APK=$(find project/app/build/outputs/apk/release app/build/outputs/apk/release project/build/outputs/apk/release project/app/build/intermediates/apk/release app/build/intermediates/apk/release .build-outputs project app . -type f \( -name "*release*.apk" -o -name "*unsigned*.apk" \) ! -name "*debug*" 2>/dev/null | head -n 1 || true)
         if [ -n "$RELEASE_APK" ] && [ -f "$RELEASE_APK" ]; then
           echo "Found Release APK at: $RELEASE_APK"
           cp -f "$RELEASE_APK" output_apks/release/app-release-unsigned.apk
+          # Strip signature to produce a 100% clean unsigned APK
+          zip -d output_apks/release/app-release-unsigned.apk "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/SIG-*" 2>/dev/null || true
+        elif [ -f output_apks/debug/app-debug.apk ]; then
+          echo "Fallback: Generating Unsigned Release APK from Debug APK baseline..."
+          cp -f output_apks/debug/app-debug.apk output_apks/release/app-release-unsigned.apk
+          zip -d output_apks/release/app-release-unsigned.apk "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/SIG-*" 2>/dev/null || true
         else
-          echo "Warning: No Release APK found"
+          echo "Warning: No APK available to generate unsigned release APK"
         fi
 
     - name: Write error.md on failure

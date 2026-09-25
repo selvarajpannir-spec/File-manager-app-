@@ -103,46 +103,6 @@ fun TopPreviewCard(
     modifier: Modifier = Modifier
 ) {
     if (item == null) {
-        // Placeholder when no file is selected
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .testTag("top_preview_placeholder_card"),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Fullscreen,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "File Preview Area (40%)",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Tap any file from the list below to preview it here instantly",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
         return
     }
 
@@ -200,7 +160,10 @@ fun TopPreviewCard(
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     IconButton(
                         onClick = onPreviewClick,
                         modifier = Modifier.size(28.dp).testTag("top_preview_fullscreen_btn")
@@ -234,15 +197,26 @@ fun TopPreviewCard(
                             )
                         }
                     }
-                    IconButton(
-                        onClick = onClose,
+
+                    // ❌ Close Preview Button - Returns to full screen file list
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close preview",
-                            modifier = Modifier.size(16.dp)
-                        )
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .testTag("top_preview_close_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close Preview",
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }

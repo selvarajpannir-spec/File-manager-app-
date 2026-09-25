@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,13 +18,29 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -70,9 +87,12 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val context = LocalContext.current
             val themeMode by appSettings.themeMode.collectAsStateWithLifecycle()
             val fontScale by appSettings.fontScale.collectAsStateWithLifecycle()
             var showSplash by rememberSaveable { mutableStateOf(pendingTargetTab == null) }
+            var showExitConfirmDialog by remember { mutableStateOf(false) }
+            var lastBackPressTime by remember { mutableLongStateOf(0L) }
 
             MyApplicationTheme(
                 themeMode = themeMode,
@@ -110,11 +130,69 @@ class MainActivity : ComponentActivity() {
                             BackHandler(enabled = true) {
                                 val handled = viewModel.navigateBack()
                                 if (!handled) {
-                                    finish()
+                                    val currentTime = System.currentTimeMillis()
+                                    if (currentTime - lastBackPressTime < 2000L) {
+                                        // Double tap on back button directly leads to exit confirmation window
+                                        showExitConfirmDialog = true
+                                    } else {
+                                        lastBackPressTime = currentTime
+                                        Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
 
                             FileManagerScreen(viewModel = viewModel)
+
+                            // Exit Confirmation Window / Dialog
+                            if (showExitConfirmDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showExitConfirmDialog = false },
+                                    icon = {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    },
+                                    title = {
+                                        Text(
+                                            text = "Exit Application",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    text = {
+                                        Text(
+                                            text = "Are you sure you want to close and exit the app?",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    confirmButton = {
+                                        Button(
+                                            onClick = {
+                                                showExitConfirmDialog = false
+                                                finishAffinity()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error
+                                            ),
+                                            modifier = Modifier.testTag("confirm_exit_btn")
+                                        ) {
+                                            Text("Exit")
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(
+                                            onClick = { showExitConfirmDialog = false },
+                                            modifier = Modifier.testTag("cancel_exit_btn")
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

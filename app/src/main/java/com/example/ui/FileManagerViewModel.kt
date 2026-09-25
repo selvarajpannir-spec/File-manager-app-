@@ -278,6 +278,10 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun navigateBack(): Boolean {
+        if (_uiState.value.selectedItemForPreview != null) {
+            onSelectFileForPreview(null)
+            return true
+        }
         if (_uiState.value.activeTab != FileExplorerTab.BROWSER) {
             setActiveTab(FileExplorerTab.BROWSER)
             return true

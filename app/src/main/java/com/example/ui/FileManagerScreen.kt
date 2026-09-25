@@ -845,51 +845,55 @@ fun BrowserTabContent(
     audioState: com.example.util.AudioPlayerState,
     context: Context
 ) {
+    val isPreviewActive = uiState.selectedItemForPreview != null
+
     Column(modifier = Modifier.fillMaxSize()) {
-        // 1. PREVIEW SPACE: 40% OF SCREEN HEIGHT
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.40f)
-                .padding(bottom = 2.dp)
-                .testTag("preview_40_percent_container"),
-            contentAlignment = Alignment.Center
-        ) {
-            TopPreviewCard(
-                item = uiState.selectedItemForPreview,
-                audioState = audioState,
-                highlightKeywords = uiState.lastScannedKeywords,
-                onClose = { viewModel.onSelectFileForPreview(null) },
-                onPreviewClick = {
-                    uiState.selectedItemForPreview?.let {
-                        viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
-                    }
-                },
-                onAddTagClick = {
-                    uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
-                },
-                onOpenExternal = {
-                    uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
-                },
-                onShare = {
-                    uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
-                },
-                onTogglePlayAudio = { uri, id, title ->
-                    viewModel.audioManager.togglePlayPause(uri, id, title)
-                },
-                onSeekAudio = { pos ->
-                    viewModel.audioManager.seekTo(pos)
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+        // 1. PREVIEW SPACE: 40% OF SCREEN HEIGHT (Shown ONLY when a file is clicked for preview)
+        if (isPreviewActive) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.40f)
+                    .padding(bottom = 2.dp)
+                    .testTag("preview_40_percent_container"),
+                contentAlignment = Alignment.Center
+            ) {
+                TopPreviewCard(
+                    item = uiState.selectedItemForPreview,
+                    audioState = audioState,
+                    highlightKeywords = uiState.lastScannedKeywords,
+                    onClose = { viewModel.onSelectFileForPreview(null) },
+                    onPreviewClick = {
+                        uiState.selectedItemForPreview?.let {
+                            viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
+                        }
+                    },
+                    onAddTagClick = {
+                        uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
+                    },
+                    onOpenExternal = {
+                        uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
+                    },
+                    onShare = {
+                        uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
+                    },
+                    onTogglePlayAudio = { uri, id, title ->
+                        viewModel.audioManager.togglePlayPause(uri, id, title)
+                    },
+                    onSeekAudio = { pos ->
+                        viewModel.audioManager.seekTo(pos)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
-        // 2. FILE LIST: 40% OF SCREEN HEIGHT
+        // 2. FILE LIST: Full Screen (90%) until file clicked, or 50% split when preview is active
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.40f)
-                .testTag("file_list_40_percent_container")
+                .weight(if (isPreviewActive) 0.50f else 0.90f)
+                .testTag("file_list_container")
         ) {
             if (uiState.isLoading) {
                 Box(
@@ -986,6 +990,7 @@ fun TaggedFilesTabContent(
     context: Context
 ) {
     val dbFilesWithTags by viewModel.allDbFilesWithTags.collectAsStateWithLifecycle()
+    val isPreviewActive = uiState.selectedItemForPreview != null
 
     val taggedItems = remember(dbFilesWithTags, uiState.selectedTagFilterIds, uiState.searchQuery) {
         val query = uiState.searchQuery.lowercase(Locale.ROOT)
@@ -1018,94 +1023,119 @@ fun TaggedFilesTabContent(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopPreviewCard(
-            item = uiState.selectedItemForPreview,
-            audioState = audioState,
-            highlightKeywords = uiState.lastScannedKeywords,
-            onClose = { viewModel.onSelectFileForPreview(null) },
-            onPreviewClick = {
-                uiState.selectedItemForPreview?.let {
-                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
-                }
-            },
-            onAddTagClick = {
-                uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
-            },
-            onOpenExternal = {
-                uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
-            },
-            onShare = {
-                uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
-            },
-            onTogglePlayAudio = { uri, id, title ->
-                viewModel.audioManager.togglePlayPause(uri, id, title)
-            },
-            onSeekAudio = { pos ->
-                viewModel.audioManager.seekTo(pos)
-            }
-        )
-
-        TagFilterHeader(
-            searchQuery = uiState.searchQuery,
-            onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
-            allTags = allTags,
-            selectedTagIds = uiState.selectedTagFilterIds,
-            onToggleTagFilter = { viewModel.onTagFilterToggled(it) },
-            onClearFilters = { viewModel.onClearTagFilters() },
-            totalCount = taggedItems.size,
-            onOpenKeywordSearch = { viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH) }
-        )
-
-        if (taggedItems.isEmpty()) {
+        if (isPreviewActive) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .weight(0.40f)
+                    .padding(bottom = 2.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Label,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(56.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "No tagged files found.\nTap '+' on any file to assign custom color tags!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                TopPreviewCard(
+                    item = uiState.selectedItemForPreview,
+                    audioState = audioState,
+                    highlightKeywords = uiState.lastScannedKeywords,
+                    onClose = { viewModel.onSelectFileForPreview(null) },
+                    onPreviewClick = {
+                        uiState.selectedItemForPreview?.let {
+                            viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
+                        }
+                    },
+                    onAddTagClick = {
+                        uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
+                    },
+                    onOpenExternal = {
+                        uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
+                    },
+                    onShare = {
+                        uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
+                    },
+                    onTogglePlayAudio = { uri, id, title ->
+                        viewModel.audioManager.togglePlayPause(uri, id, title)
+                    },
+                    onSeekAudio = { pos ->
+                        viewModel.audioManager.seekTo(pos)
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(if (isPreviewActive) 0.50f else 0.90f)
+        ) {
+            TagFilterHeader(
+                searchQuery = uiState.searchQuery,
+                onSearchQueryChange = { viewModel.onSearchQueryChanged(it) },
+                allTags = allTags,
+                selectedTagIds = uiState.selectedTagFilterIds,
+                onToggleTagFilter = { viewModel.onTagFilterToggled(it) },
+                onClearFilters = { viewModel.onClearTagFilters() },
+                totalCount = taggedItems.size,
+                onOpenKeywordSearch = { viewModel.setActiveTab(FileExplorerTab.KEYWORD_SEARCH) }
+            )
+
+            if (taggedItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Label,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "No tagged files found.\nTap '+' on any file to assign custom color tags!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    items(taggedItems, key = { it.path }) { item ->
+                        FileListItem(
+                            item = item,
+                            isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
+                            onClick = {
+                                if (item.file.exists() && item.file.isDirectory) {
+                                    viewModel.setActiveTab(FileExplorerTab.BROWSER)
+                                    viewModel.loadDirectory(item.path)
+                                } else {
+                                    viewModel.onSelectFileForPreview(item)
+                                }
+                            },
+                            onAddTagClick = { viewModel.openTagSheet(item) },
+                            onOpenWithSystem = { openFileInExternalApp(context, item.file) },
+                            onShare = { shareFile(context, item.file) },
+                            onRename = { viewModel.openRenameDialog(item) },
+                            onShowDetails = { viewModel.openDetailsDialog(item) },
+                            onDelete = { viewModel.deleteItem(item) }
+                        )
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 96.dp, top = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                items(taggedItems, key = { it.path }) { item ->
-                    FileListItem(
-                        item = item,
-                        isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
-                        onClick = {
-                            if (item.file.exists() && item.file.isDirectory) {
-                                viewModel.setActiveTab(FileExplorerTab.BROWSER)
-                                viewModel.loadDirectory(item.path)
-                            } else {
-                                viewModel.onSelectFileForPreview(item)
-                            }
-                        },
-                        onAddTagClick = { viewModel.openTagSheet(item) },
-                        onOpenWithSystem = { openFileInExternalApp(context, item.file) },
-                        onShare = { shareFile(context, item.file) },
-                        onRename = { viewModel.openRenameDialog(item) },
-                        onShowDetails = { viewModel.openDetailsDialog(item) },
-                        onDelete = { viewModel.deleteItem(item) }
-                    )
-                }
-            }
+        }
+
+        // AdMob Placeholder
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(0.10f)
+        ) {
+            AdMobBannerPlaceholder()
         }
     }
 }

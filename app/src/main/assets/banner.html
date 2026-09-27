@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8f9fa;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .header {
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      padding: 3px 0;
+      letter-spacing: 0.3px;
+      transition: background-color 0.4s ease;
+      background-color: #1a73e8;
+    }
+    #banner {
+      display: flex;
+      align-items: center;
+      height: 52px;
+      padding: 0 10px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      cursor: pointer;
+    }
+    #banner img {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      object-fit: contain;
+      object-position: center;
+      margin-right: 10px;
+      flex-shrink: 0;
+      background: #f1f3f4;
+    }
+    .text {
+      flex: 1;
+      overflow: hidden;
+    }
+    .title {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .subtitle-container {
+      overflow: hidden;
+      height: 15px;
+      position: relative;
+    }
+    .subtitle {
+      font-size: 11px;
+      white-space: nowrap;
+      position: absolute;
+      animation: marquee 12s linear infinite;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .cta {
+      background: #1a73e8;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 14px;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="header" id="header">Try Our Other Apps</div>
+  <div id="banner">
+    <img id="icon" src="" alt="">
+    <div class="text">
+      <div class="title" id="title">Loading...</div>
+      <div class="subtitle-container">
+        <div class="subtitle" id="subtitle"></div>
+      </div>
+    </div>
+    <div class="cta">Get</div>
+  </div>
+
+<script>
+  const defaultBanners = [
+    {
+      image: "https://cdn.jsdelivr.net/gh/selvarajpannir-spec/onsite/images/rider.png",
+      title: "Rider+",
+      subtitle: "Delivery management for independent gig workers",
+      url: "https://play.google.com/store/apps/details?id=com.riderplus.app"
+    },
+    {       
+      image: "https://cdn.jsdelivr.net/gh/selvarajpannir-spec/onsite/images/iv-manager.png",
+      title: "Inventory Manager+",
+      subtitle: "Simple inventory app for SME",
+      url: "https://play.google.com/store/apps/details?id=com.inventorymanagerplus.app"
+    },
+    {
+      image: "https://cdn.jsdelivr.net/gh/selvarajpannir-spec/onsite/images/lifting.png",
+      title: "Lifting+",
+      subtitle: "Lifting Plan Helper",
+      url: "https://play.google.com/store/apps/details?id=com.lifting.plus"
+    },
+    {
+      image: "https://cdn.jsdelivr.net/gh/selvarajpannir-spec/onsite/images/salary.png",
+      title: "Salary+",
+      subtitle: "Quick salary & allowance calculator",
+      url: "https://play.google.com/store/apps/details?id=com.salaryplus.app"
+    },
+    {
+      image: "https://cdn.jsdelivr.net/gh/selvarajpannir-spec/onsite/images/docs+.png",
+      title: "Docs+",
+      subtitle: "Bulk document generator from templates",
+      url: "https://play.google.com/store/apps/details?id=com.docs.plus"
+    }
+  ];
+
+  const colors = [
+    "#1a73e8", "#d93025", "#188038", "#f9ab00",
+    "#a142f4", "#e37400", "#007b83"
+  ];
+
+  let banners = [];
+  let current = 0;
+  const rotateSeconds = 16;
+
+  function loadBanners() {
+    const cached = localStorage.getItem("house_banners");
+    if (navigator.onLine) {
+      banners = defaultBanners;
+      localStorage.setItem("house_banners", JSON.stringify(defaultBanners));
+    } else if (cached) {
+      try {
+        banners = JSON.parse(cached);
+      } catch (e) {
+        banners = defaultBanners;
+      }
+    } else {
+      banners = defaultBanners;
+    }
+
+    if (banners.length > 0) {
+      showBanner(0);
+      setInterval(() => {
+        current = (current + 1) % banners.length;
+        showBanner(current);
+      }, rotateSeconds * 1000);
+    }
+  }
+
+  function showBanner(index) {
+    const b = banners[index];
+    const color = colors[index % colors.length];
+
+    document.getElementById("header").style.backgroundColor = color;
+    document.getElementById("icon").src = b.image;
+    document.getElementById("title").innerText = b.title;
+    document.getElementById("title").style.color = color;
+
+    const subtitle = document.getElementById("subtitle");
+    subtitle.innerText = b.subtitle;
+    subtitle.style.color = color;
+
+    subtitle.style.animation = "none";
+    subtitle.offsetHeight;
+    subtitle.style.animation = "marquee 12s linear infinite";
+
+    document.getElementById("banner").onclick = () => {
+      if (window.Android && typeof Android.openUrl === 'function') {
+        Android.openUrl(b.url);
+      } else if (window.Android && typeof Android.openPlayStore === 'function') {
+        Android.openPlayStore(b.url);
+      } else {
+        window.location.href = b.url;
+      }
+    };
+  }
+
+  window.addEventListener("online", () => {
+    loadBanners();
+  });
+
+  loadBanners();
+</script>
+</body>
+</html>

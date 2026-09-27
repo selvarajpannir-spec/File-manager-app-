@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import com.example.ui.components.PromoAdBanner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -187,23 +188,38 @@ fun FileManagerScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            // SINGLE UNIFIED NAVIGATION BAR (Consolidates 4 previous bars into 1 compact bar with dropdowns & search lens)
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("single_unified_nav_bar")
+                    .statusBarsPadding()
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
-                if (isSearchFileNameOpen) {
-                    // INLINE SEARCH FILE NAME MODE
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                // 1ST TOP POSITION: PROMOTIONAL AD BANNER
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .testTag("top_promo_ad_banner_container")
+                ) {
+                    PromoAdBanner()
+                }
+
+                // 2ND POSITION: SINGLE UNIFIED NAVIGATION BAR
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 3.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("single_unified_nav_bar")
+                ) {
+                    if (isSearchFileNameOpen) {
+                        // INLINE SEARCH FILE NAME MODE
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                         IconButton(
                             onClick = {
                                 isSearchFileNameOpen = false
@@ -258,7 +274,6 @@ fun FileManagerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -636,6 +651,7 @@ fun FileManagerScreen(
             }
         }
     }
+}
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -732,39 +748,45 @@ fun FileManagerScreen(
             }
 
             // Tabs Content
-            when (uiState.activeTab) {
-                FileExplorerTab.BROWSER -> {
-                    BrowserTabContent(
-                        viewModel = viewModel,
-                        uiState = uiState,
-                        allTags = allTags,
-                        audioState = audioState,
-                        context = context
-                    )
-                }
-                FileExplorerTab.KEYWORD_SEARCH -> {
-                    KeywordSearchTabContent(
-                        viewModel = viewModel,
-                        uiState = uiState,
-                        audioState = audioState,
-                        context = context
-                    )
-                }
-                FileExplorerTab.TAGGED_FILES -> {
-                    TaggedFilesTabContent(
-                        viewModel = viewModel,
-                        uiState = uiState,
-                        allTags = allTags,
-                        audioState = audioState,
-                        context = context
-                    )
-                }
-                FileExplorerTab.STORAGE_INFO -> {
-                    StorageInfoTabContent(
-                        viewModel = viewModel,
-                        uiState = uiState,
-                        context = context
-                    )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                when (uiState.activeTab) {
+                    FileExplorerTab.BROWSER -> {
+                        BrowserTabContent(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            allTags = allTags,
+                            audioState = audioState,
+                            context = context
+                        )
+                    }
+                    FileExplorerTab.KEYWORD_SEARCH -> {
+                        KeywordSearchTabContent(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            audioState = audioState,
+                            context = context
+                        )
+                    }
+                    FileExplorerTab.TAGGED_FILES -> {
+                        TaggedFilesTabContent(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            allTags = allTags,
+                            audioState = audioState,
+                            context = context
+                        )
+                    }
+                    FileExplorerTab.STORAGE_INFO -> {
+                        StorageInfoTabContent(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            context = context
+                        )
+                    }
                 }
             }
         }
@@ -965,11 +987,11 @@ fun BrowserTabContent(
             }
         }
 
-        // 2. FILE LIST: Full Screen (90%) until file clicked, or 50% split when preview is active
+        // 2. FILE LIST: Full Screen (takes all remaining space, or 60% when preview is active)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(if (isPreviewActive) 0.50f else 0.90f)
+                .weight(if (isPreviewActive) 0.60f else 1.0f)
                 .testTag("file_list_container")
         ) {
             if (uiState.isLoading) {
@@ -1044,16 +1066,6 @@ fun BrowserTabContent(
                     }
                 }
             }
-        }
-
-        // 3. ADMOB BANNER AD PLACEHOLDER: 10% OF SCREEN HEIGHT (FOR FUTURE ADMOB)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.10f)
-                .testTag("admob_banner_placeholder_container")
-        ) {
-            AdMobBannerPlaceholder()
         }
     }
 }
@@ -1140,7 +1152,7 @@ fun TaggedFilesTabContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(if (isPreviewActive) 0.50f else 0.90f)
+                .weight(if (isPreviewActive) 0.60f else 1.0f)
         ) {
             TagFilterHeader(
                 searchQuery = uiState.searchQuery,
@@ -1204,15 +1216,6 @@ fun TaggedFilesTabContent(
                     }
                 }
             }
-        }
-
-        // AdMob Placeholder
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.10f)
-        ) {
-            AdMobBannerPlaceholder()
         }
     }
 }
@@ -1466,69 +1469,11 @@ fun shareFile(context: Context, file: File) {
 }
 
 /**
- * AdMob Banner placeholder (occupying ~10% screen height) reserved for future AdMob banner ads.
+ * AdMob / Promo Ad Banner bridge to GitHub page and Google Play Store.
  */
 @Composable
 fun AdMobBannerPlaceholder(
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color(0xFFF59E0B)
-                ) {
-                    Text(
-                        text = "Ad",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = "Files+ High Performance Storage",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "AdMob Banner Ad Slot • 320x50 / Adaptive Ready",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontSize = 9.sp,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.primaryContainer
-            ) {
-                Text(
-                    text = "Files+ ⚡",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
-    }
+    PromoAdBanner(modifier = modifier)
 }

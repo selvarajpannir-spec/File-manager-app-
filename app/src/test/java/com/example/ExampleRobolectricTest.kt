@@ -43,7 +43,7 @@ class ExampleRobolectricTest {
     @Test
     fun `read string from context`() {
         val appName = context.getString(R.string.app_name)
-        assertEquals("File Manager", appName)
+        assertEquals("Files+", appName)
     }
 
     @Test

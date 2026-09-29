@@ -203,7 +203,7 @@ fun FileManagerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 840.dp)
-                        .height(74.dp)
+                        .height(76.dp)
                         .align(Alignment.CenterHorizontally)
                         .testTag("top_promo_ad_banner_container")
                 ) {

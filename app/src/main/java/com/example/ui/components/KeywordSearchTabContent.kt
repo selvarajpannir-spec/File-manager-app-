@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.FileExplorerTab
 import com.example.ui.FileManagerViewModel
 import com.example.ui.FileUiState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.VerticalDivider
 import com.example.ui.openFileInExternalApp
 import com.example.ui.shareFile
 
@@ -72,34 +75,114 @@ fun KeywordSearchTabContent(
     audioState: com.example.util.AudioPlayerState,
     context: Context
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        // MINIMIZED TOP PREVIEW CARD
-        TopPreviewCard(
-            item = uiState.selectedItemForPreview,
-            audioState = audioState,
-            highlightKeywords = uiState.lastScannedKeywords,
-            onClose = { viewModel.onSelectFileForPreview(null) },
-            onPreviewClick = {
-                uiState.selectedItemForPreview?.let {
-                    viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
+    val isPreviewActive = uiState.selectedItemForPreview != null
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isExpandedScreen = maxWidth >= 680.dp
+
+        if (isExpandedScreen && isPreviewActive) {
+            // SIDE-BY-SIDE LIST-DETAIL FOR TABLET/FOLDABLE
+            Row(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .weight(0.52f)
+                        .fillMaxHeight()
+                ) {
+                    SearchControlsAndResults(
+                        viewModel = viewModel,
+                        uiState = uiState,
+                        context = context
+                    )
                 }
-            },
-            onAddTagClick = {
-                uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
-            },
-            onOpenExternal = {
-                uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
-            },
-            onShare = {
-                uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
-            },
-            onTogglePlayAudio = { uri, id, title ->
-                viewModel.audioManager.togglePlayPause(uri, id, title)
-            },
-            onSeekAudio = { pos ->
-                viewModel.audioManager.seekTo(pos)
+
+                VerticalDivider(
+                    modifier = Modifier.fillMaxHeight(),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .weight(0.48f)
+                        .fillMaxHeight()
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TopPreviewCard(
+                        item = uiState.selectedItemForPreview,
+                        audioState = audioState,
+                        highlightKeywords = uiState.lastScannedKeywords,
+                        onClose = { viewModel.onSelectFileForPreview(null) },
+                        onPreviewClick = {
+                            uiState.selectedItemForPreview?.let {
+                                viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
+                            }
+                        },
+                        onAddTagClick = {
+                            uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
+                        },
+                        onOpenExternal = {
+                            uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
+                        },
+                        onShare = {
+                            uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
+                        },
+                        onTogglePlayAudio = { uri, id, title ->
+                            viewModel.audioManager.togglePlayPause(uri, id, title)
+                        },
+                        onSeekAudio = { pos ->
+                            viewModel.audioManager.seekTo(pos)
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
-        )
+        } else {
+            // COMPACT MOBILE VIEW
+            Column(modifier = Modifier.fillMaxSize()) {
+                TopPreviewCard(
+                    item = uiState.selectedItemForPreview,
+                    audioState = audioState,
+                    highlightKeywords = uiState.lastScannedKeywords,
+                    onClose = { viewModel.onSelectFileForPreview(null) },
+                    onPreviewClick = {
+                        uiState.selectedItemForPreview?.let {
+                            viewModel.openFileChoicePrompt(it, uiState.lastScannedKeywords)
+                        }
+                    },
+                    onAddTagClick = {
+                        uiState.selectedItemForPreview?.let { viewModel.openTagSheet(it) }
+                    },
+                    onOpenExternal = {
+                        uiState.selectedItemForPreview?.let { openFileInExternalApp(context, it.file) }
+                    },
+                    onShare = {
+                        uiState.selectedItemForPreview?.let { shareFile(context, it.file) }
+                    },
+                    onTogglePlayAudio = { uri, id, title ->
+                        viewModel.audioManager.togglePlayPause(uri, id, title)
+                    },
+                    onSeekAudio = { pos ->
+                        viewModel.audioManager.seekTo(pos)
+                    }
+                )
+
+                SearchControlsAndResults(
+                    viewModel = viewModel,
+                    uiState = uiState,
+                    context = context
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchControlsAndResults(
+    viewModel: FileManagerViewModel,
+    uiState: FileUiState,
+    context: Context
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
 
         // KEYWORD SEARCH CONTROLLER CARD
         Card(

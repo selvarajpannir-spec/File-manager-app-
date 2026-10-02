@@ -1,197 +1,166 @@
-# File Manager — System Explorer, Tagging, Multi-Format Search & Auto Organizer
+# Files+ ⚡
+### *The Intelligent Android File Explorer, Deep Document Search Engine & Auto-Organizer*
 
-A modern, high-performance Android File Manager built with **Jetpack Compose**, **Material 3**, **Room Database with FTS4**, and **Kotlin Coroutines / Flow**.
-
----
-
-## 🌟 Key Features
-
-1. **System & Storage File Explorer (Fast Search & Navigation)**:
-   - Full access and navigation across Root (`/`), System (`/system`, `/etc`, `/proc`, `/sys`), and Internal/External storage (`/sdcard`, `Downloads`, `Documents`, `DCIM`, `Pictures`, `Music`, `Movies`).
-   - Breadcrumb path navigation bar with instant folder jumping.
-   - Fast file name and tag filter header within current directories.
-   - Hidden files toggle (`.filename`) and multi-criteria sorting (Name, Date, Size, Type).
-
-2. **3-Dot Overflow Drawer & Top Bar Streamlining**:
-   - Clean, decluttered top app bar with all control options grouped into a Material 3 3-dot overflow menu (`MoreVert`):
-     - ✨ **Auto Organize Files** (Smart extension organizer)
-     - ☀️ / 🌙 **Theme Switcher** (Light & Dark theme)
-     - 🔤 **Font Size Adjustment**
-     - 👁️ **Hidden Files Toggle**
-     - 🔃 **Sort Files By...** (Name, Date, Size, Type)
-     - 🗄️ **Storage Partitions Quick Jump**
-     - 🔄 **Refresh Directory**
-
-3. **Auto Organize Files (Smart Extension-Based Categorization)**:
-   - **Safety Warning Alert**: Prominently warns users about moving files and changing locations before any action is taken.
-   - **Customizable Scope**: Select specific folders (`Downloads`, `Documents`, `Pictures`, `DCIM`, `Movies`, `Music`, `Storage Root`) or toggle "Select All Folders".
-   - **Automatic Folder Creation**: Inspects file extensions, creates missing category subfolders, and moves files cleanly.
-   - **Supported Extension Mappings**:
-     - 🖼️ **Images**: `jpg`, `jpeg`, `png`, `gif`, `webp`, `svg`, `bmp`, `heic`, `tiff`, `ico` → `/AutoOrganized/Images/`
-     - 🎬 **Videos**: `mp4`, `mkv`, `avi`, `mov`, `flv`, `wmv`, `3gp`, `webm`, `m4v`, `ts` → `/AutoOrganized/Videos/`
-     - 📄 **Documents**: `txt`, `md`, `doc`, `docx`, `pdf`, `rtf`, `odt`, `tex`, `pages`, `epub` → `/AutoOrganized/Documents/`
-     - 💻 **Code Files**: `java`, `kt`, `kts`, `html`, `htm`, `css`, `scss`, `yml`, `yaml`, `json`, `xml`, `py`, `js`, `ts`, `jsx`, `tsx`, `cpp`, `c`, `h`, `sh`, `sql`, `rs`, `go`, `php`, `rb`, `dart`, `gradle`, `properties`, `toml` → `/AutoOrganized/Code/`
-     - 📊 **Sheets**: `xls`, `xlsx`, `csv`, `ods`, `tsv`, `numbers`, `xlsm` → `/AutoOrganized/Sheets/`
-     - 📽️ **Presentations**: `ppt`, `pptx`, `odp`, `key`, `pps`, `ppsx` → `/AutoOrganized/Presentations/`
-     - 🎵 **Audio & Music**: `mp3`, `wav`, `ogg`, `m4a`, `flac`, `aac`, `opus`, `wma`, `mid`, `midi` → `/AutoOrganized/Audio/`
-     - 📦 **Archives**: `zip`, `rar`, `7z`, `tar`, `gz`, `bz2`, `xz`, `iso`, `tgz` → `/AutoOrganized/Archives/`
-     - 📱 **Apps**: `apk`, `xapk`, `apks` → `/AutoOrganized/Apps/`
-   - **System Protection**: Strictly ignores and protects system paths (`/system`, `/proc`, `/sys`, `/dev`, `/apex`, `/vendor`, `/etc`) and app-private package folders (`/Android/data/com.*`, `/Android/obb/com.*`).
-   - **Name Conflict Handling**: Safely handles existing files with automatic rename indexing (`document_1.pdf`) and updates Room database tag associations.
-   - **Live Progress & Summary**: Live progress indicator displaying current file, scanning counts, moved count, and category breakdown. Direct "Open Organized Folder" button upon completion.
-
-4. **Dedicated Background Keyword Search Page (Multi-Format)**:
-   - Separate dedicated navigation page for heavy content scanning across the entire file system.
-   - Supports searching by single or **comma-separated multiple keywords** (e.g. `report, 2024, invoice` or `error, null, config`).
-   - Deep storage scanner for finding keywords across all formats:
-     - **Text & Code**: `.txt`, `.md`, `.log`, `.csv`, `.json`, `.xml`, `.kt`, `.java`, `.py`, `.sh`, `.conf`, `.ini`, `.properties`, `.yaml`, `.sql`, etc.
-     - **Office Open XML Documents**: `.docx`, `.xlsx`, `.pptx`, `.odt`, `.ods` (in-memory XML stream scanner).
-     - **PDF Documents**: Content stream and text token analysis.
-     - **Binary & System Files**: ASCII string inspection.
-   - **Background Running**: Runs asynchronously in the background while user browses other files or minimizes the app.
-   - **System Notification & Direct Access**: Triggers Android notification (`POST_NOTIFICATIONS`) when the scan finishes, allowing users to tap the notification and open the Keyword Search results page directly.
-   - Supports **Match ANY Keyword** or **Match ALL Keywords** mode with matched keyword badges, line snippets, and instant preview.
-
-5. **Interactive Color-Coded Tagging & Bookmarks**:
-   - Custom tags with vibrant color badges (`#system`, `#config`, `#important`, `#media`, `#code`, `#docs`, `#work`).
-   - Fast filtering by single or multiple tags.
-   - Room SQLite persistence with `FileTagCrossRef` relational mapping.
-
-6. **Multi-Format Instant Previews**:
-   - **Text / Code**: Monospace line previews with syntax readability.
-   - **PDF Viewer**: High-fidelity bitmap page rendering via native Android `PdfRenderer`.
-   - **Binary & System Files**: Formatted 16-byte Hex Dump viewer (`Offset | Hex Bytes | ASCII`).
-   - **Audio Player**: Integrated audio preview manager with play/pause, duration, and scrubber.
-   - **Images & Photos**: High-res Coil image rendering.
-
-7. **Theming & Global Typography Scaling**:
-   - **Theme Toggle (☀️ / 🌙)**: Instant switch between Light and Dark mode.
-   - **Font Size & Display Scale (🔤)**: Dynamic typography scaling (Small 85%, Normal 100%, Large 115%, Extra Large 130%, Huge 150%) persisted via `AppSettings`.
-
-8. **Permissions & Security**:
-   - Persistent `MANAGE_EXTERNAL_STORAGE` verification on app start and resume (`onResume`).
-   - Automated permission guidance window when access is not yet granted.
-   - Zero sample file pollution; operates exclusively on real device files.
+[![Android](https://img.shields.io/badge/Platform-Android_8.0+-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://android.com)
+[![Kotlin](https://img.shields.io/badge/Language-Kotlin_1.9+-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack_Compose_Material_3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Privacy First](https://img.shields.io/badge/Privacy-100%25_Offline-00C853?style=for-the-badge&logo=shield&logoColor=white)](#privacy-first-and-security)
 
 ---
 
-## 🛠️ Error Log & Solutions Reference (Knowledge Base)
+## 💡 Why Files+ Reinvents the Way You Manage Files
 
-This section documents all technical challenges and errors encountered during development and how each was resolved for future reference.
+Traditional file managers treat your device like a dusty storage locker: a labyrinth of nested folders, cryptic filenames, and rigid directories where finding a single document feels like searching for a needle in a haystack. 
 
----
+**Files+ is built for how we actually use our devices today.** 
 
-### 1. Kotlin Type Inference & Unresolved Stream Lambdas
-* **Symptom / Error**: Build errors on `FileOutputStream` and `InputStream` in lambda scopes (e.g. `unresolved reference: FileOutputStream`, `cannot infer type for input.copyTo(output)`).
-* **Root Cause**: Missing explicit imports for `java.io.FileOutputStream` and `java.io.InputStream` when chaining IO extension functions.
-* **Resolution**:
-  - Explicitly imported `java.io.FileOutputStream` and `java.io.InputStream`.
-  - Used Kotlin's `.use { ... }` block scoping to ensure guaranteed stream closing and auto-flushing.
+Instead of opening five different apps just to check a receipt, verify an invoice, or play an audio clip, **Files+** gives you an instant, fluid workspace. Whether you're searching inside 300-page PDF backups for a phone number, organizing thousands of messy downloads in one tap, or grouping project assets across different folders with color-coded tags, **Files+ saves you minutes on every single interaction.**
 
 ---
 
-### 2. Android 11+ (API 30+) Scoped Storage & System Directory Visibility
-* **Symptom / Error**: The app could not list system directories (`/system`, `/etc`) or external shared storage (`/sdcard/Downloads`), returning empty arrays or throwing `SecurityException: Permission denied`.
-* **Root Cause**: Android 10+ scoped storage restrictions restrict standard `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` permissions to media collections only.
-* **Resolution**:
-  - Declared `MANAGE_EXTERNAL_STORAGE` in `AndroidManifest.xml` with `tools:ignore="ScopedStorage"`.
-  - Added runtime check using `Environment.isExternalStorageManager()`.
-  - Implemented an `onResume` lifecycle hook that checks storage permission every time the user opens or resumes the app and triggers `Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` if access is missing.
+## ⚡ How Files+ Saves You Time Every Day
+
+| Everyday Task | Classic File Managers | **With Files+** |
+| :--- | :--- | :--- |
+| **Check a PDF or Document** | Click file ➔ choose external app ➔ wait for heavy viewer to load ➔ exit back. | 👁️ **Instant Top Preview**: See page 1 of PDFs, photos, videos, and code right in your feed. |
+| **Find Text or Phone Number in Documents** | Impossible without manually opening and skimming every file one by one. | 🔍 **Deep Multi-Format Search**: Searches *inside* PDFs, DOCX, XLSX, TXT, VCF, and Code files simultaneously. |
+| **Messy Download & DCIM Folders** | Spend 30 minutes manually creating folders and dragging files. | ✨ **1-Tap Auto-Organize**: Scans hundreds of files and sorts them into neat, categorized folders in seconds. |
+| **Organize Projects Across Storage** | Forced to duplicate files into rigid single-folder structures. | 🏷️ **Color-Coded Cross-Folder Tags**: Group files with `#Work`, `#Tax2024`, or `#Urgent` anywhere on your device. |
+| **Listen to Voice Notes / Audio** | Launches an external media player that takes over your screen. | 🎵 **Inline Mini-Player**: Play, scrub, and pause audio clips right from the preview header. |
+| **Inspect Code or Binary Logs** | Requires a dedicated text editor or desktop hex tool. | 💻 **Built-in Syntax & Hex Inspector**: View formatted code and 16-byte hex dumps with zero lag. |
 
 ---
 
-### 3. Native `PdfRenderer` Lifecycle & Seekable Descriptors
-* **Symptom / Error**: `java.io.IOException: file not seekable` or native crash when rendering PDF files from content URIs or external storage.
-* **Root Cause**: Android's `PdfRenderer` requires a seekable `ParcelFileDescriptor` opened in read-only mode (`MODE_READ_ONLY`). Direct streaming `InputStream` or unseekable pipe descriptors cause immediate failure.
-* **Resolution**:
-  - Built a dual-path resolver in `FileUtil.renderPdfFirstPage`:
-    - For `file://` schemes: `ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)`.
-    - For `content://` schemes: `context.contentResolver.openFileDescriptor(uri, "r")`.
-  - Protected all resources in a strict `finally` block to prevent descriptor leaks.
+## 🚀 Key Features You'll Love
+
+### 1. 👁️ Instant Multi-Format File Preview (Zero App Switching)
+No more waiting for third-party viewers to load. Tapping any file immediately activates the interactive **Top Preview Card**:
+* 📄 **PDFs**: Ultra-crisp vector page rendering powered by native Android `PdfRenderer`.
+* 🖼️ **Photos & Graphics**: High-definition image previews with zoom and metadata inspect.
+* 🎵 **Audio & Voice Memos**: Inline playback with live scrubber, duration stamps, and waveform control.
+* 🎬 **Video Files**: Seamless video frame extraction and instant player integration.
+* 💻 **Code & Text**: Monospaced syntax display with line numbers for Python, Kotlin, JS, JSON, XML, Markdown, and shell scripts.
+* 🔬 **Binary & System Inspector**: Formatted 16-byte Hex Dump viewer (`Offset | Hex Bytes | ASCII`) for logs and raw binaries.
 
 ---
 
-### 4. Deep Keyword Search Across Multi-Format Files (PDF, Mobile Numbers, .docx, .xlsx, .vcf, .txt)
-* **Symptom / Error**: User searched for mobile numbers or contact names stored inside backup PDF documents, and standard file search failed to detect them.
-* **Root Cause**: PDF files compress text streams using `FlateDecode` (ZLIB/Deflate), CMap font encodings, and multi-column layouts. Reading raw bytes directly without a PDF structure engine misses virtually all document text. In addition, phone numbers formatted in various styles (e.g., `(987) 654-3210`, `+91 98765-43210`, `9876543210`) require digit sequence normalization to match irrespective of formatting.
-* **Resolution**:
-  - Integrated `com.tom-roush:pdfbox-android` (Apache PDFBox for Android):
-    - **PDFBox Page-by-Page Text Extraction**: Uses `PDFTextStripper` to extract full textual contents and metadata (Title, Author, Subject, Keywords) across up to 400 pages per PDF document.
-    - **Mobile Number & Digits Normalization**: Added flexible digit matching so searching `9876543210` matches `(987) 654-3210`, `+91-98765-43210`, and `987 654 3210`.
-    - **Contacts Backup (.vcf) Scanner**: Scans vCard records (`FN:`, `TEL:`, `EMAIL:`, `NOTE:`).
-    - **Office Documents (`.docx`, `.xlsx`, `.pptx`, `.odt`, `.ods`)**: Deep XML parser for document bodies, slides, and shared strings.
-    - **Line Snippets with Page Number**: Returns structured excerpts (e.g. `[Page 2] ... Name: John Doe | Mobile: +1 555-123-4567 ...`).
-    - **Background Async & Notification**: Continues deep searching in the background and posts a system notification upon completion with direct one-tap access.
+### 2. 🔍 Deep Keyword & Content Search Engine
+Traditional search only looks at filenames. **Files+ reads what's inside.**
+* 📚 **Searches Inside Heavy Files**: Scans text inside **PDFs** (up to 400 pages per file), **Word** (`.docx`), **Excel** (`.xlsx`), **PowerPoint** (`.pptx`), and **vCard** contacts (`.vcf`).
+* 📞 **Smart Phone Number & Entity Matching**: Searches flexible numeric patterns (e.g. searching `9876543210` matches `(987) 654-3210`, `+91-98765-43210`, and `987 654 3210`).
+* ⚡ **Multi-Keyword Logic**: Filter with comma-separated terms (`invoice, 2024, paid`) using **Match ANY** or **Match ALL** modes.
+* 🔔 **Background Scanning with Notification**: Run intensive scans in the background while continuing your work. Receive a rich Android notification when ready, with one-tap jump directly to the matched results.
 
 ---
 
-### 5. Auto Organize Safety & System Path Protection
-* **Symptom / Error**: Potential risks of moving system files, app-private directories (e.g. `Android/data/com.abc.app`), or creating infinite recursive folder loops inside the destination directory.
-* **Root Cause**: Without strict path guards, recursive directory traversal could attempt to organize `.cache`, package internal folders, or the `/AutoOrganized` folder itself.
-* **Resolution**:
-  - Implemented `AutoOrganizeManager.isProtectedOrSystemPath`:
-    - Blocks all destination directory paths and subdirectories to prevent recursive re-organizing.
-    - Blocks `/system`, `/proc`, `/sys`, `/dev`, `/apex`, `/vendor`, `/etc`, `/product`.
-    - Blocks `/Android/data`, `/Android/obb`, `/Android/sandbox`, and package names (`com.*`, `org.*`, `io.*`, `net.*`).
-    - Skips hidden system directories (`.thumbnails`, `.cache`, `.git`).
-  - Added safe collision resolution (`file_1.ext`) and synchronized path updates in Room SQLite database.
+### 3. ✨ 1-Tap Smart Auto-Organizer
+Turn messy `Downloads`, `DCIM`, or `WhatsApp` directories into clean, structured libraries in seconds:
+* 🗂️ **Automated Category Routing**:
+  * 🖼️ **Images**: `.jpg`, `.png`, `.gif`, `.webp`, `.heic`, `.svg` ➔ `/AutoOrganized/Images/`
+  * 📄 **Documents**: `.pdf`, `.docx`, `.doc`, `.txt`, `.md`, `.odt` ➔ `/AutoOrganized/Documents/`
+  * 🎬 **Videos**: `.mp4`, `.mkv`, `.mov`, `.avi`, `.webm` ➔ `/AutoOrganized/Videos/`
+  * 📊 **Sheets**: `.xlsx`, `.xls`, `.csv`, `.numbers` ➔ `/AutoOrganized/Sheets/`
+  * 💻 **Code**: `.kt`, `.py`, `.js`, `.json`, `.html`, `.cpp`, `.sql` ➔ `/AutoOrganized/Code/`
+  * 📦 **Archives & Apps**: `.zip`, `.rar`, `.7z`, `.tar`, `.apk` ➔ `/AutoOrganized/Archives/` & `/Apps/`
+* 🛡️ **Fail-Safe Protection**: Automatically preserves system directories (`/system`, `/proc`, `/sys`) and app data (`/Android/data`).
+* 🔁 **Collision-Proof**: Safely renames duplicates (`document_1.pdf`) and updates all SQLite database tag associations automatically.
 
 ---
 
-## 📱 Architecture Diagram
+### 4. 🏷️ Color-Coded Tagging & Quick Bookmarks
+Break free from rigid folder trees:
+* **Custom Tags**: Assign vibrant labels like `#Personal`, `#Work`, `#Receipts`, `#Important`, or `#Code`.
+* **Universal Filtering**: Filter your whole device by tag with a single tap, regardless of which folder or subfolder the file lives in.
+* **SQLite Persistence**: Backed by a local Room database with lightning-fast query indexing.
+
+---
+
+### 5. 🎨 Ergonomic Material 3 Design & Fluid Controls
+* 🌗 **Smart Light / Dark Modes**: Seamless palette transition with deep OLED slate background (`#0F172A`) for battery savings.
+* 🔤 **Dynamic Display & Font Scaling**: Choose from 5 typography scales (85% to 150%) that reflow text without clipping.
+* 📱 **Adaptive Form Factor Support**: Optimized for compact phones, flip covers, large flagships, foldables, tablets, and Chromebooks.
+* ⚡ **Instant Cold-Start Launch**: Dedicated lightweight `SplashActivity` with native window background styling ensures **zero black-screen delays** on startup.
+
+---
+
+## 🔒 Privacy First & 100% Offline
+
+Your files are your private business.
+* 🚫 **Zero Cloud Tracking**: All search indexing, PDF text extraction, and categorization happens **strictly on your device's CPU**.
+* 🌐 **No Unnecessary Telemetry**: Your files, filenames, tags, and search keywords are never uploaded to any remote server.
+* 🔐 **Full Scoped Storage Compliance**: Built for modern Android 11+ (API 30–34) with transparent all-files access permissions.
+
+---
+
+## 🏗️ Architecture & Technology Stack
+
+Built following modern Android architecture guidelines:
 
 ```
 com.example
-├── MainActivity.kt               # Entry point with Theme & Notification routing
+├── SplashActivity.kt             # Lightweight, zero-lag launch entry point
+├── MainActivity.kt               # Jetpack Compose UI container & navigation
 ├── data
-│   ├── local                     # Room Database, DAOs, Entities, FTS4
+│   ├── local                     # Room Database, DAOs, Entities, FTS4 Full-Text Search
 │   │   ├── AppDatabase.kt
-│   │   ├── dao/
-│   │   │   ├── FileDao.kt
-│   │   │   └── TagDao.kt
-│   │   └── entity/
-│   │       ├── FileEntity.kt
-│   │       ├── TagEntity.kt
-│   │       ├── FileTagCrossRef.kt
-│   │       ├── FileWithTags.kt
-│   │       └── FileContentFTS.kt
-│   ├── model
-│   │   └── FileSystemItem.kt     # Unified model for file system + tag metadata
-│   └── repository
-│       └── FileManagerRepository.kt
+│   │   ├── dao/ (FileDao, TagDao)
+│   │   └── entity/ (FileEntity, TagEntity, FileTagCrossRef, FileContentFTS)
+│   ├── model/ (FileSystemItem)
+│   └── repository/ (FileManagerRepository)
 ├── ui
-│   ├── FileManagerScreen.kt      # Main UI with 3-dot overflow drawer & tabs
-│   ├── FileManagerViewModel.kt   # UI state machine, keyword search & organizer
+│   ├── FileManagerScreen.kt      # Main responsive workspace & List-Detail pane
+│   ├── FileManagerViewModel.kt   # UI state machine, deep search & organizer engine
 │   ├── components/
-│   │   ├── AutoOrganizeDialog.kt # Warning modal, folder/category checklist & progress
-│   │   ├── KeywordSearchTabContent.kt # Dedicated background keyword search UI
-│   │   ├── TagFilterHeader.kt    # Explorer tab search & tag filter chips
-│   │   ├── TopPreviewCard.kt     # Instant preview (Text, PDF, Hex, Audio, Image)
-│   │   ├── FileListItem.kt       # Adaptive file row with tags and context menu
-│   │   ├── SearchMatchItem.kt    # Deep search result item with keyword badges
-│   │   ├── TagSelectionBottomSheet.kt
-│   │   ├── FontSizeDialog.kt     # Font scale selection dialog
-│   │   ├── PermissionDialog.kt   # Storage permission guidance modal
-│   │   ├── FileDetailsDialog.kt
-│   │   ├── CreateFolderDialog.kt
-│   │   ├── CreateFileDialog.kt
-│   │   └── RenameFileDialog.kt
-│   └── theme/
-│       ├── Theme.kt              # Dynamic Dark/Light & LocalDensity font scale
-│       ├── Color.kt
-│       └── Type.kt
+│   │   ├── TopPreviewCard.kt     # Multi-format live preview (PDF, Media, Hex, Code)
+│   │   ├── AutoOrganizeDialog.kt # Interactive categorization checklist & progress
+│   │   ├── KeywordSearchTab.kt   # Background full-text search interface
+│   │   ├── TagSelectionSheet.kt  # Material 3 tag manager
+│   │   └── PromoAdBanner.kt      # Tight-fit non-intrusive promotion banner
+│   └── theme/                    # Dynamic Material 3 colors, typography, shapes
 └── util
+    ├── StorageSearchScanner.kt   # Apache PDFBox & multi-format text extractor
     ├── AutoOrganizeManager.kt    # Extension categorization engine & safe mover
     ├── NotificationHelper.kt     # System notifications on scan completion
-    ├── AppSettings.kt            # Theme mode and font scale persistence
-    ├── StorageSearchScanner.kt   # Multi-format deep keyword search engine
-    ├── FileUtil.kt               # File category, hex dump, PDF render, audio meta
-    └── AudioPreviewManager.kt    # Media player controller
+    ├── FileUtil.kt               # Category detection, Hex dump, PdfRenderer
+    └── AppSettings.kt            # Datastore-backed theme & font scale preferences
+```
+
+* **Framework**: [Jetpack Compose (Material 3)](https://developer.android.com/jetpack/compose)
+* **Language**: [Kotlin 1.9+](https://kotlinlang.org/)
+* **Database**: [Room SQLite with FTS4 Full-Text Search](https://developer.android.com/training/data-storage/room)
+* **Document Engine**: [Apache PDFBox for Android](https://github.com/TomRoush/PdfBox-Android)
+* **Image Loading**: [Coil Compose](https://coil-kt.github.io/coil/compose/)
+* **Concurrency**: Kotlin Coroutines & `StateFlow`
+
+---
+
+## 🚀 Getting Started
+
+### Minimum Requirements
+* **OS**: Android 8.0 (API Level 26) or higher
+* **Target SDK**: Android 14+ (API Level 34)
+* **Storage Access**: "All Files Access" (`MANAGE_EXTERNAL_STORAGE`) for full device management.
+
+### Build & Run
+```bash
+# Clone the repository
+git clone https://github.com/your-username/FilesPlus.git
+
+# Navigate into the project directory
+cd FilesPlus
+
+# Build the debug APK
+gradle assembleDebug
+
+# Run unit and instrumented tests
+gradle testDebugUnitTest
 ```
 
 ---
 
-## 🚀 Verification & Testing
-- Target SDK: Android 14+ (API 34)
-- Min SDK: Android 8.0 (API 26)
-- Tested with Scoped Storage, Root/System partition navigation, Deep Multi-Format search, Auto Organize folder categorization, and Dynamic Theming.
+## 🌟 Why You'll Never Go Back to Classic File Managers
+
+Files+ transforms file browsing from a tedious chore into a fast, intelligent, and enjoyable experience. Whether you're organizing gigabytes of media, quickly inspecting code on the go, or searching for an invoice buried deep in your storage, **Files+ gives you the control, speed, and intelligence you deserve.**
+
+---
+*Crafted with ❤️ for modern Android devices.*

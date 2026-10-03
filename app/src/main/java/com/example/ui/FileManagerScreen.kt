@@ -1282,7 +1282,11 @@ private fun FileListContent(
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    items(displayItems, key = { it.path }) { item ->
+                    items(
+                        count = displayItems.size,
+                        key = { idx -> "${displayItems[idx].path}_$idx" }
+                    ) { idx ->
+                        val item = displayItems[idx]
                         FileListItem(
                             item = item,
                             isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
@@ -1524,7 +1528,11 @@ private fun TaggedItemsList(
             contentPadding = PaddingValues(bottom = 16.dp, top = 2.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            items(taggedItems, key = { it.path }) { item ->
+            items(
+                count = taggedItems.size,
+                key = { idx -> "${taggedItems[idx].path}_$idx" }
+            ) { idx ->
+                val item = taggedItems[idx]
                 FileListItem(
                     item = item,
                     isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,

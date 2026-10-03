@@ -43,12 +43,13 @@ class FileManagerRepository(
         }
 
         val rawFiles = FileUtil.listDirectoryFiles(dir, showHidden)
+        if (rawFiles.isEmpty()) return@withContext emptyList()
+
         rawFiles.map { file ->
-            val dbRecord = fileDao.getFileWithTagsByPath(file.absolutePath)
             FileSystemItem(
                 file = file,
-                tags = dbRecord?.tags ?: emptyList(),
-                dbFileId = dbRecord?.file?.id
+                tags = emptyList(),
+                dbFileId = null
             )
         }
     }

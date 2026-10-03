@@ -161,6 +161,10 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             showPermissionPromptDialog = false
         )
 
+        // 1. Instant Startup: Load initial directory immediately
+        loadDirectory(initialPath, addToHistory = false)
+
+        // 2. Background task: Load storage partitions and stats non-blockingly
         viewModelScope.launch(Dispatchers.IO) {
             val locations = FileUtil.getAvailableStorageLocations(application)
             val stats = FileUtil.getStorageStats()
@@ -173,7 +177,6 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             }
 
             repository.initializeDefaultTagsAndCleanupSamples(application)
-            loadDirectory(initialPath)
         }
 
         // Observe background foreground service deep search progress
@@ -379,7 +382,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
 
-            val sorted = sortItems(items, _uiState.value.sortMode)
+            val sorted = sortItems(items.distinctBy { it.path }, _uiState.value.sortMode)
             _uiState.value = _uiState.value.copy(
                 currentItems = sorted,
                 isLoading = false,
@@ -433,11 +436,15 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 .ifEmpty { listOf(Environment.getExternalStorageDirectory()?.absolutePath ?: "") }
 
             val files = withContext(Dispatchers.IO) {
-                FileUtil.searchFilesByNameAcrossStorage(
-                    rootPaths = roots,
-                    query = cleanQuery,
-                    maxResults = 500
-                )
+                try {
+                    FileUtil.searchFilesByNameAcrossStorage(
+                        rootPaths = roots,
+                        query = cleanQuery,
+                        maxResults = 500
+                    )
+                } catch (_: Throwable) {
+                    emptyList()
+                }
             }
 
             val items = withContext(Dispatchers.IO) {
@@ -457,7 +464,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
 
-            val sorted = sortItems(items, _uiState.value.sortMode)
+            val sorted = sortItems(items.distinctBy { it.path }, _uiState.value.sortMode)
             _uiState.value = _uiState.value.copy(
                 isGlobalSearching = false,
                 globalSearchResults = sorted

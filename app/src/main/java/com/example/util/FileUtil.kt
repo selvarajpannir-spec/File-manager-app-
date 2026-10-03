@@ -714,6 +714,24 @@ object FileUtil {
     }
 
     /**
+     * Filters a list of roots to only include top-level disjoint ancestor directories.
+     */
+    fun getTopLevelRoots(rootPaths: List<String>): List<String> {
+        val existing = rootPaths.map { File(it) }.filter { it.exists() && it.canRead() }
+        val result = mutableListOf<File>()
+        for (f in existing) {
+            val fPath = f.absolutePath
+            val hasAncestor = existing.any { other ->
+                other != f && fPath.startsWith(other.absolutePath.trimEnd('/') + "/")
+            }
+            if (!hasAncestor) {
+                result.add(f)
+            }
+        }
+        return result.map { it.absolutePath }.distinct()
+    }
+
+    /**
      * Scans storage locations for files matching a specific DocumentTypeFilter.
      */
     fun scanFilesByFilter(
@@ -723,36 +741,55 @@ object FileUtil {
         searchQuery: String = ""
     ): List<File> {
         val results = mutableListOf<File>()
+        val seenPaths = HashSet<String>()
         val queryLower = searchQuery.trim().lowercase(Locale.ROOT)
         val extSet = filter.extensions.map { it.lowercase(Locale.ROOT) }.toSet()
+        val topRoots = getTopLevelRoots(rootPaths)
 
-        for (rootPath in rootPaths) {
+        for (rootPath in topRoots) {
             val root = File(rootPath)
             if (!root.exists() || !root.canRead()) continue
 
             val queue = ArrayDeque<File>()
+            val visitedDirs = HashSet<String>()
             queue.add(root)
+            try { visitedDirs.add(root.canonicalPath) } catch (_: Throwable) { visitedDirs.add(root.absolutePath) }
 
             while (queue.isNotEmpty() && results.size < maxResults) {
                 val currentDir = queue.removeFirst()
-                val files = currentDir.listFiles() ?: continue
+                val files = try { currentDir.listFiles() } catch (_: Throwable) { null } ?: continue
 
                 for (f in files) {
-                    if (f.isDirectory) {
+                    try {
                         val name = f.name
-                        if (!name.startsWith(".") && !isSystemPath(f.absolutePath) &&
-                            !name.equals("Android", ignoreCase = true) && !name.equals("cache", ignoreCase = true)) {
-                            queue.add(f)
-                        }
-                    } else if (f.isFile) {
-                        val ext = f.extension.lowercase(Locale.ROOT)
-                        if (ext in extSet) {
-                            if (queryLower.isEmpty() || f.name.lowercase(Locale.ROOT).contains(queryLower)) {
-                                results.add(f)
-                                if (results.size >= maxResults) break
+                        if (name.startsWith(".")) continue
+
+                        if (f.isDirectory) {
+                            val cPath = try { f.canonicalPath } catch (_: Throwable) { f.absolutePath }
+                            if (!visitedDirs.contains(cPath) &&
+                                !isSystemPath(f.absolutePath) &&
+                                !name.equals("Android", ignoreCase = true) &&
+                                !name.equals("cache", ignoreCase = true) &&
+                                !name.equals(".thumbnails", ignoreCase = true) &&
+                                !name.equals(".trashed", ignoreCase = true)
+                            ) {
+                                visitedDirs.add(cPath)
+                                queue.add(f)
+                            }
+                        } else if (f.isFile) {
+                            val ext = f.extension.lowercase(Locale.ROOT)
+                            if (ext in extSet) {
+                                val fPath = f.absolutePath
+                                if (!seenPaths.contains(fPath)) {
+                                    if (queryLower.isEmpty() || name.lowercase(Locale.ROOT).contains(queryLower)) {
+                                        seenPaths.add(fPath)
+                                        results.add(f)
+                                        if (results.size >= maxResults) break
+                                    }
+                                }
                             }
                         }
-                    }
+                    } catch (_: Throwable) {}
                 }
             }
         }
@@ -768,30 +805,50 @@ object FileUtil {
         maxResults: Int = 500
     ): List<File> {
         val results = mutableListOf<File>()
+        val seenPaths = HashSet<String>()
         val cleanQuery = query.trim().lowercase(Locale.ROOT)
         if (cleanQuery.isEmpty()) return emptyList()
+        val topRoots = getTopLevelRoots(rootPaths)
 
-        for (rootPath in rootPaths) {
+        for (rootPath in topRoots) {
             val root = File(rootPath)
             if (!root.exists() || !root.canRead()) continue
 
             val queue = ArrayDeque<File>()
+            val visitedDirs = HashSet<String>()
             queue.add(root)
+            try { visitedDirs.add(root.canonicalPath) } catch (_: Throwable) { visitedDirs.add(root.absolutePath) }
 
             while (queue.isNotEmpty() && results.size < maxResults) {
                 val currentDir = queue.removeFirst()
-                val files = currentDir.listFiles() ?: continue
+                val files = try { currentDir.listFiles() } catch (_: Throwable) { null } ?: continue
 
                 for (f in files) {
-                    val name = f.name
-                    if (name.lowercase(Locale.ROOT).contains(cleanQuery)) {
-                        results.add(f)
-                        if (results.size >= maxResults) break
-                    }
-                    if (f.isDirectory && !name.startsWith(".") && !isSystemPath(f.absolutePath) &&
-                        !name.equals("Android", ignoreCase = true) && !name.equals("cache", ignoreCase = true)) {
-                        queue.add(f)
-                    }
+                    try {
+                        val name = f.name
+                        if (name.startsWith(".")) continue
+
+                        val fPath = f.absolutePath
+                        if (!seenPaths.contains(fPath) && name.lowercase(Locale.ROOT).contains(cleanQuery)) {
+                            seenPaths.add(fPath)
+                            results.add(f)
+                            if (results.size >= maxResults) break
+                        }
+
+                        if (f.isDirectory) {
+                            val cPath = try { f.canonicalPath } catch (_: Throwable) { f.absolutePath }
+                            if (!visitedDirs.contains(cPath) &&
+                                !isSystemPath(f.absolutePath) &&
+                                !name.equals("Android", ignoreCase = true) &&
+                                !name.equals("cache", ignoreCase = true) &&
+                                !name.equals(".thumbnails", ignoreCase = true) &&
+                                !name.equals(".trashed", ignoreCase = true)
+                            ) {
+                                visitedDirs.add(cPath)
+                                queue.add(f)
+                            }
+                        }
+                    } catch (_: Throwable) {}
                 }
             }
         }

@@ -65,7 +65,7 @@ fun TagFilterHeader(
             onValueChange = onSearchQueryChange,
             placeholder = {
                 Text(
-                    "Filter files in current folder...",
+                    "Search files by name...",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )

@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -14,12 +12,15 @@ import android.os.ParcelFileDescriptor
 import android.os.StatFs
 import android.provider.OpenableColumns
 import android.util.Log
+import android.util.Xml
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.security.MessageDigest
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -124,26 +125,30 @@ object FileUtil {
     }
 
     fun listDirectoryFiles(dir: File, showHidden: Boolean = true): List<File> {
-        return try {
-            val list = dir.listFiles() ?: emptyArray()
-            val filtered = if (showHidden) list else list.filter { !it.name.startsWith(".") }.toTypedArray()
-            filtered.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase(Locale.ROOT) }))
-        } catch (e: Exception) {
-            Log.w(TAG, "Error reading directory ${dir.absolutePath}: ${e.message}")
-            emptyList()
-        }
+        if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return emptyList()
+        val files = dir.listFiles() ?: return emptyList()
+        return files.filter { file ->
+            if (!showHidden && file.name.startsWith(".")) false else true
+        }.toList()
     }
 
     fun getAvailableStorageLocations(context: Context): List<StorageLocation> {
         val list = mutableListOf<StorageLocation>()
 
-        // 1. Internal Storage / SDCard
-        val extStorage = Environment.getExternalStorageDirectory()
-        if (extStorage != null && extStorage.exists()) {
-            list.add(StorageLocation("Internal Storage", extStorage.absolutePath, "📱", isSystem = false))
+        // 1. Primary Internal Storage
+        val primaryExternal = Environment.getExternalStorageDirectory()
+        if (primaryExternal != null && primaryExternal.exists()) {
+            list.add(
+                StorageLocation(
+                    title = "Internal Storage",
+                    path = primaryExternal.absolutePath,
+                    iconEmoji = "📱",
+                    isSystem = false
+                )
+            )
         }
 
-        // 2. Standard Public Directories
+        // 2. Standard User Folders
         val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         if (downloads != null && downloads.exists()) {
             list.add(StorageLocation("Downloads", downloads.absolutePath, "📥", isSystem = false))
@@ -154,14 +159,9 @@ object FileUtil {
             list.add(StorageLocation("Documents", documents.absolutePath, "📄", isSystem = false))
         }
 
-        val dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
-        if (dcim != null && dcim.exists()) {
-            list.add(StorageLocation("DCIM / Camera", dcim.absolutePath, "📷", isSystem = false))
-        }
-
         val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
         if (pictures != null && pictures.exists()) {
-            list.add(StorageLocation("Pictures", pictures.absolutePath, "🖼️", isSystem = false))
+            list.add(StorageLocation("Pictures & DCIM", pictures.absolutePath, "🖼️", isSystem = false))
         }
 
         val music = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
@@ -231,14 +231,17 @@ object FileUtil {
         }
     }
 
-    fun renderPdfFirstPage(context: Context, uri: Uri): Bitmap? {
+    /**
+     * Safely renders a PDF page to a Bitmap using the system PdfRenderer.
+     */
+    fun renderPdfPage(context: Context, uri: Uri, pageIndex: Int = 0): PdfRenderResult {
         var pfd: ParcelFileDescriptor? = null
         var renderer: PdfRenderer? = null
         var page: PdfRenderer.Page? = null
         return try {
             pfd = if (uri.scheme == "file") {
                 val file = File(uri.path ?: "")
-                if (!file.exists()) return null
+                if (!file.exists() || !file.canRead()) return PdfRenderResult(null, 0, 0, "File not accessible")
                 ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
             } else {
                 context.contentResolver.openFileDescriptor(uri, "r")
@@ -246,25 +249,35 @@ object FileUtil {
 
             if (pfd != null) {
                 renderer = PdfRenderer(pfd)
-                if (renderer.pageCount > 0) {
-                    page = renderer.openPage(0)
-                    val width = (page.width * 1.5f).toInt().coerceAtLeast(200)
-                    val height = (page.height * 1.5f).toInt().coerceAtLeast(200)
+                val pageCount = renderer.pageCount
+                if (pageCount > 0) {
+                    val safeIndex = pageIndex.coerceIn(0, pageCount - 1)
+                    page = renderer.openPage(safeIndex)
+                    val width = (page.width * 1.5f).toInt().coerceIn(200, 2048)
+                    val height = (page.height * 1.5f).toInt().coerceIn(200, 2048)
                     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(bitmap)
                     canvas.drawColor(Color.WHITE)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    bitmap
-                } else null
-            } else null
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to render PDF preview: ${e.message}")
-            null
+                    PdfRenderResult(bitmap, pageCount, safeIndex)
+                } else {
+                    PdfRenderResult(null, 0, 0, "Empty PDF document")
+                }
+            } else {
+                PdfRenderResult(null, 0, 0, "Cannot open PDF descriptor")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to render PDF page: ${t.message}")
+            PdfRenderResult(null, 0, 0, t.message ?: "Failed to render PDF")
         } finally {
-            try { page?.close() } catch (_: Exception) {}
-            try { renderer?.close() } catch (_: Exception) {}
-            try { pfd?.close() } catch (_: Exception) {}
+            try { page?.close() } catch (_: Throwable) {}
+            try { renderer?.close() } catch (_: Throwable) {}
+            try { pfd?.close() } catch (_: Throwable) {}
         }
+    }
+
+    fun renderPdfFirstPage(context: Context, uri: Uri): Bitmap? {
+        return renderPdfPage(context, uri, 0).bitmap
     }
 
     fun extractTextPreview(context: Context, uri: Uri, maxChars: Int = 10000): String {
@@ -319,10 +332,7 @@ object FileUtil {
             sb.append("----------------------------------------------------------\n")
 
             for (i in 0 until read step 16) {
-                // Offset
                 sb.append(String.format(Locale.ROOT, "%08X: ", i))
-
-                // Hex bytes
                 val hexPart = StringBuilder()
                 val asciiPart = StringBuilder()
 
@@ -369,12 +379,43 @@ object FileUtil {
         }
     }
 
+    fun extractAudioMetadata(context: Context, file: File): AudioMetadata {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            if (file.exists() && file.canRead()) {
+                retriever.setDataSource(file.absolutePath)
+            } else {
+                return AudioMetadata()
+            }
+            val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+            val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+            val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val durationMs = durationStr?.toLongOrNull() ?: 0L
+
+            AudioMetadata(
+                title = title,
+                artist = artist,
+                album = album,
+                durationMs = durationMs
+            )
+        } catch (e: Exception) {
+            AudioMetadata()
+        } finally {
+            try { retriever.release() } catch (_: Exception) {}
+        }
+    }
+
     fun extractAudioMetadata(context: Context, uri: Uri): AudioMetadata {
         val retriever = MediaMetadataRetriever()
         return try {
             if (uri.scheme == "file") {
                 val f = File(uri.path ?: "")
-                if (f.exists()) retriever.setDataSource(f.absolutePath) else return AudioMetadata()
+                if (f.exists() && f.canRead()) {
+                    retriever.setDataSource(f.absolutePath)
+                } else {
+                    return AudioMetadata()
+                }
             } else {
                 retriever.setDataSource(context, uri)
             }
@@ -421,8 +462,16 @@ object FileUtil {
         return Pair(name, size)
     }
 
-    fun extractPdfText(file: File, maxPages: Int = 15): String? {
+    /**
+     * Safely extracts text from PDF files using PDFBox Android with comprehensive error recovery.
+     */
+    fun extractPdfText(context: Context? = null, file: File, maxPages: Int = 15): String? {
         return try {
+            if (context != null) {
+                try {
+                    PDFBoxResourceLoader.init(context)
+                } catch (_: Throwable) {}
+            }
             PDDocument.load(file).use { doc ->
                 val stripper = PDFTextStripper()
                 val pages = minOf(doc.numberOfPages, maxPages)
@@ -430,7 +479,8 @@ object FileUtil {
                 stripper.endPage = pages
                 stripper.getText(doc)
             }
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
+            Log.w(TAG, "extractPdfText safely handled exception: ${t.message}")
             null
         }
     }
@@ -441,50 +491,116 @@ object FileUtil {
     }
 
     /**
-     * Parses a Word (.docx) document into structured paragraph blocks.
+     * Robust XmlPullParser-based DOCX parser that cleanly extracts text without raw XML markup.
      */
     fun readOfficeDocxParagraphs(file: File): List<String> {
         val paragraphs = mutableListOf<String>()
         try {
-            val zis = ZipInputStream(FileInputStream(file))
-            var entry: ZipEntry? = zis.nextEntry
-            while (entry != null) {
-                if (entry.name.equals("word/document.xml", ignoreCase = true) || entry.name.endsWith("document.xml")) {
-                    val xml = zis.reader(Charsets.UTF_8).readText()
-                    // Extract all <w:p>...</w:p> paragraph nodes
-                    val pRegex = Regex("<w:p[ >](.*?)</w:p>", RegexOption.DOT_MATCHES_ALL)
-                    val pMatches = pRegex.findAll(xml)
-                    for (pMatch in pMatches) {
-                        val pContent = pMatch.value
-                        // Extract text nodes <w:t>...</w:t>
-                        val tRegex = Regex("<w:t[^>]*>(.*?)</w:t>")
-                        val pText = tRegex.findAll(pContent)
-                            .map { it.groupValues[1] }
-                            .joinToString("")
-                            .replace("&amp;", "&")
-                            .replace("&lt;", "<")
-                            .replace("&gt;", ">")
-                            .replace("&quot;", "\"")
-                            .replace("&apos;", "'")
-                            .trim()
-                        if (pText.isNotEmpty()) {
-                            paragraphs.add(pText)
+            ZipInputStream(FileInputStream(file).buffered()).use { zis ->
+                var entry: ZipEntry? = zis.nextEntry
+                while (entry != null) {
+                    val entryName = entry.name.lowercase(Locale.ROOT)
+                    if (entryName == "word/document.xml" || entryName.endsWith("/document.xml")) {
+                        val parser = Xml.newPullParser()
+                        parser.setInput(InputStreamReader(zis, Charsets.UTF_8))
+                        var eventType = parser.eventType
+                        var currentPara = StringBuilder()
+                        var insidePara = false
+
+                        while (eventType != XmlPullParser.END_DOCUMENT) {
+                            val tag = parser.name?.lowercase(Locale.ROOT) ?: ""
+                            when (eventType) {
+                                XmlPullParser.START_TAG -> {
+                                    when (tag) {
+                                        "p" -> {
+                                            insidePara = true
+                                            currentPara = StringBuilder()
+                                        }
+                                        "tab" -> {
+                                            if (insidePara) currentPara.append("    ")
+                                        }
+                                        "br", "cr" -> {
+                                            if (insidePara) currentPara.append("\n")
+                                        }
+                                        "t" -> {
+                                            val text = parser.nextText()
+                                            if (insidePara && text.isNotEmpty()) {
+                                                currentPara.append(text)
+                                            }
+                                        }
+                                    }
+                                }
+                                XmlPullParser.END_TAG -> {
+                                    when (tag) {
+                                        "p", "tr" -> {
+                                            val line = currentPara.toString().trim()
+                                            if (line.isNotEmpty()) {
+                                                paragraphs.add(line)
+                                            }
+                                            currentPara = StringBuilder()
+                                            insidePara = false
+                                        }
+                                    }
+                                }
+                            }
+                            eventType = parser.next()
+                        }
+                        val remaining = currentPara.toString().trim()
+                        if (remaining.isNotEmpty()) {
+                            paragraphs.add(remaining)
+                        }
+                        break
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Error parsing docx via XmlPullParser: ${t.message}")
+        }
+        return paragraphs
+    }
+
+    /**
+     * Parses PowerPoint (.pptx) slides into structured text.
+     */
+    fun readOfficePptxParagraphs(file: File): List<String> {
+        val paragraphs = mutableListOf<String>()
+        try {
+            ZipInputStream(FileInputStream(file).buffered()).use { zis ->
+                var entry = zis.nextEntry
+                var slideIndex = 1
+                while (entry != null) {
+                    val name = entry.name.lowercase(Locale.ROOT)
+                    if (name.startsWith("ppt/slides/slide") && name.endsWith(".xml")) {
+                        val parser = Xml.newPullParser()
+                        parser.setInput(InputStreamReader(zis, Charsets.UTF_8))
+                        var eventType = parser.eventType
+                        var slideText = StringBuilder()
+                        slideText.append("Slide $slideIndex:\n")
+
+                        while (eventType != XmlPullParser.END_DOCUMENT) {
+                            val tag = parser.name?.lowercase(Locale.ROOT) ?: ""
+                            if (eventType == XmlPullParser.START_TAG && tag == "t") {
+                                val t = parser.nextText()
+                                if (t.isNotBlank()) {
+                                    slideText.append(t).append(" ")
+                                }
+                            }
+                            eventType = parser.next()
+                        }
+                        val result = slideText.toString().trim()
+                        if (result.length > "Slide $slideIndex:".length) {
+                            paragraphs.add(result)
+                            slideIndex++
                         }
                     }
-                    if (paragraphs.isEmpty()) {
-                        // Fallback: strip XML tags
-                        val fallback = xml.replace(Regex("<[^>]*>"), " ")
-                            .replace(Regex("\\s+"), " ")
-                            .trim()
-                        if (fallback.isNotEmpty()) paragraphs.add(fallback)
-                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
                 }
-                zis.closeEntry()
-                entry = zis.nextEntry
             }
-            zis.close()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error parsing docx: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Error parsing pptx: ${t.message}")
         }
         return paragraphs
     }
@@ -499,21 +615,20 @@ object FileUtil {
             var sheetXml: String? = null
 
             // Pass 1: Extract shared strings and primary sheet
-            val zis1 = ZipInputStream(FileInputStream(file))
+            val zis1 = ZipInputStream(FileInputStream(file).buffered())
             var entry1: ZipEntry? = zis1.nextEntry
             while (entry1 != null) {
                 val name = entry1.name.lowercase(Locale.ROOT)
                 if (name.endsWith("sharedstrings.xml")) {
-                    val xml = zis1.reader(Charsets.UTF_8).readText()
-                    // Extract <si><t>...</t></si> or standalone <t>
-                    val tRegex = Regex("<t[^>]*>(.*?)</t>", RegexOption.DOT_MATCHES_ALL)
-                    tRegex.findAll(xml).forEach {
-                        val str = it.groupValues[1]
-                            .replace("&amp;", "&")
-                            .replace("&lt;", "<")
-                            .replace("&gt;", ">")
-                            .replace("&quot;", "\"")
-                        sharedStrings.add(str)
+                    val parser = Xml.newPullParser()
+                    parser.setInput(InputStreamReader(zis1, Charsets.UTF_8))
+                    var eventType = parser.eventType
+                    while (eventType != XmlPullParser.END_DOCUMENT) {
+                        val tag = parser.name?.lowercase(Locale.ROOT) ?: ""
+                        if (eventType == XmlPullParser.START_TAG && tag == "t") {
+                            sharedStrings.add(parser.nextText())
+                        }
+                        eventType = parser.next()
                     }
                 } else if (sheetXml == null && (name.contains("worksheets/sheet1.xml") || (name.contains("sheet") && name.endsWith(".xml")))) {
                     sheetXml = zis1.reader(Charsets.UTF_8).readText()
@@ -524,7 +639,6 @@ object FileUtil {
             zis1.close()
 
             if (sheetXml != null) {
-                // Parse rows: <row r="1"> ... <c r="A1" t="s"><v>0</v></c> ... </row>
                 val rowRegex = Regex("<row[^>]*>(.*?)</row>", RegexOption.DOT_MATCHES_ALL)
                 val rowMatches = rowRegex.findAll(sheetXml)
 
@@ -542,14 +656,12 @@ object FileUtil {
                         val valContent = cMatch.groupValues[3]
                         val inlineText = cMatch.groupValues[4]
 
-                        // Convert column letters (A, B, C...) to index (0, 1, 2...)
                         var colIdx = 0
                         for (ch in colLetters) {
                             colIdx = colIdx * 26 + (ch - 'A' + 1)
                         }
                         colIdx -= 1
 
-                        // Fill in blank cells between columns
                         while (lastColIdx + 1 < colIdx && rowCells.size < maxCols) {
                             rowCells.add("")
                             lastColIdx++
@@ -574,8 +686,8 @@ object FileUtil {
                     }
                 }
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error parsing xlsx table: ${e.message}")
+        } catch (t: Throwable) {
+            Log.w(TAG, "Error parsing xlsx table: ${t.message}")
         }
         return rows
     }
@@ -600,6 +712,116 @@ object FileUtil {
         }
         return rows
     }
+
+    /**
+     * Scans storage locations for files matching a specific DocumentTypeFilter.
+     */
+    fun scanFilesByFilter(
+        rootPaths: List<String>,
+        filter: DocumentTypeFilter,
+        maxResults: Int = 1000,
+        searchQuery: String = ""
+    ): List<File> {
+        val results = mutableListOf<File>()
+        val queryLower = searchQuery.trim().lowercase(Locale.ROOT)
+        val extSet = filter.extensions.map { it.lowercase(Locale.ROOT) }.toSet()
+
+        for (rootPath in rootPaths) {
+            val root = File(rootPath)
+            if (!root.exists() || !root.canRead()) continue
+
+            val queue = ArrayDeque<File>()
+            queue.add(root)
+
+            while (queue.isNotEmpty() && results.size < maxResults) {
+                val currentDir = queue.removeFirst()
+                val files = currentDir.listFiles() ?: continue
+
+                for (f in files) {
+                    if (f.isDirectory) {
+                        val name = f.name
+                        if (!name.startsWith(".") && !isSystemPath(f.absolutePath) &&
+                            !name.equals("Android", ignoreCase = true) && !name.equals("cache", ignoreCase = true)) {
+                            queue.add(f)
+                        }
+                    } else if (f.isFile) {
+                        val ext = f.extension.lowercase(Locale.ROOT)
+                        if (ext in extSet) {
+                            if (queryLower.isEmpty() || f.name.lowercase(Locale.ROOT).contains(queryLower)) {
+                                results.add(f)
+                                if (results.size >= maxResults) break
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return results
+    }
+
+    /**
+     * Fast recursive filename search across entire storage tree.
+     */
+    fun searchFilesByNameAcrossStorage(
+        rootPaths: List<String>,
+        query: String,
+        maxResults: Int = 500
+    ): List<File> {
+        val results = mutableListOf<File>()
+        val cleanQuery = query.trim().lowercase(Locale.ROOT)
+        if (cleanQuery.isEmpty()) return emptyList()
+
+        for (rootPath in rootPaths) {
+            val root = File(rootPath)
+            if (!root.exists() || !root.canRead()) continue
+
+            val queue = ArrayDeque<File>()
+            queue.add(root)
+
+            while (queue.isNotEmpty() && results.size < maxResults) {
+                val currentDir = queue.removeFirst()
+                val files = currentDir.listFiles() ?: continue
+
+                for (f in files) {
+                    val name = f.name
+                    if (name.lowercase(Locale.ROOT).contains(cleanQuery)) {
+                        results.add(f)
+                        if (results.size >= maxResults) break
+                    }
+                    if (f.isDirectory && !name.startsWith(".") && !isSystemPath(f.absolutePath) &&
+                        !name.equals("Android", ignoreCase = true) && !name.equals("cache", ignoreCase = true)) {
+                        queue.add(f)
+                    }
+                }
+            }
+        }
+        return results
+    }
+}
+
+data class PdfRenderResult(
+    val bitmap: Bitmap?,
+    val pageCount: Int,
+    val currentPage: Int,
+    val error: String? = null
+)
+
+enum class DocumentTypeFilter(
+    val title: String,
+    val iconEmoji: String,
+    val extensions: List<String>,
+    val description: String
+) {
+    ALL_PDF("PDF Documents", "📄", listOf("pdf"), "All .pdf files across storage"),
+    ALL_WORD("Word Documents", "📝", listOf("docx", "doc", "rtf", "odt", "dotx", "dot"), "All Word & Rich Text docs"),
+    ALL_EXCEL("Spreadsheets & Excel", "📊", listOf("xlsx", "xls", "csv", "tsv", "ods", "xltx"), "All Excel, Sheets & CSV tables"),
+    ALL_PPT("Presentations & Slides", "📽️", listOf("pptx", "ppt", "odp", "ppsx"), "All PowerPoint & Slide decks"),
+    ALL_TEXT("Text & Markdown", "📜", listOf("txt", "md", "log", "ini", "json", "xml", "nfo"), "All plain text, markdown & logs"),
+    ALL_CODE("Source Code Files", "💻", listOf("kt", "java", "py", "js", "ts", "html", "css", "c", "cpp", "h", "sql", "sh", "rs", "go"), "All programming source code files"),
+    ALL_IMAGES("Photos & Images", "🖼️", listOf("jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "heic", "ico"), "All pictures and graphics"),
+    ALL_AUDIO("Audio & Music", "🎵", listOf("mp3", "wav", "m4a", "aac", "flac", "ogg", "opus", "wma"), "All songs, recordings & audio"),
+    ALL_VIDEO("Videos & Movies", "🎬", listOf("mp4", "mkv", "mov", "avi", "webm", "3gp", "flv"), "All video recordings & clips"),
+    ALL_ARCHIVES("Archives & ZIPs", "📦", listOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz", "apk"), "All compressed archives and packages")
 }
 
 enum class FileCategory {

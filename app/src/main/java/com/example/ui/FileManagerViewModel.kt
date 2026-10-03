@@ -75,8 +75,13 @@ data class FileUiState(
     val activeTab: FileExplorerTab = FileExplorerTab.BROWSER,
     val sortMode: SortMode = SortMode.NAME_ASC,
     val viewLayoutMode: ViewLayoutMode = ViewLayoutMode.LIST,
+    // Dedicated File Type Category Filter (Partition Menu Option)
+    val activeDocumentTypeFilter: com.example.util.DocumentTypeFilter? = null,
     // Explorer Tab Fast File Search
     val searchQuery: String = "",
+    val isGlobalSearchActive: Boolean = false,
+    val isGlobalSearching: Boolean = false,
+    val globalSearchResults: List<FileSystemItem> = emptyList(),
     val selectedTagFilterIds: Set<Long> = emptySet(),
     // Dedicated Keyword Search Tab
     val keywordSearchInput: String = "",
@@ -143,6 +148,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     private var keywordSearchJob: Job? = null
     private var organizeJob: Job? = null
+    private var globalSearchJob: Job? = null
 
     init {
         val initialPath = Environment.getExternalStorageDirectory()?.absolutePath
@@ -332,9 +338,131 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // --- Fast File Search in Explorer Tab ---
+    // --- Dedicated File Type Category Filter (Partition Menu Option) ---
+    fun loadDocumentTypeCategory(filter: com.example.util.DocumentTypeFilter) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                activeDocumentTypeFilter = filter,
+                isLoading = true,
+                errorMessage = null,
+                activeTab = FileExplorerTab.BROWSER
+            )
+
+            val roots = _uiState.value.storageLocations
+                .filter { !it.isSystem }
+                .map { it.path }
+                .ifEmpty { listOf(Environment.getExternalStorageDirectory()?.absolutePath ?: "") }
+
+            val files = withContext(Dispatchers.IO) {
+                FileUtil.scanFilesByFilter(
+                    rootPaths = roots,
+                    filter = filter,
+                    maxResults = 1200,
+                    searchQuery = _uiState.value.searchQuery
+                )
+            }
+
+            val items = withContext(Dispatchers.IO) {
+                files.map { file ->
+                    FileSystemItem(
+                        file = file,
+                        name = file.name,
+                        path = file.absolutePath,
+                        isDirectory = false,
+                        size = file.length(),
+                        formattedSize = FileUtil.formatFileSize(file.length()),
+                        lastModified = file.lastModified(),
+                        category = FileUtil.getFileCategory(file),
+                        tags = emptyList(),
+                        permissions = FileUtil.getPermissionsString(file)
+                    )
+                }
+            }
+
+            val sorted = sortItems(items, _uiState.value.sortMode)
+            _uiState.value = _uiState.value.copy(
+                currentItems = sorted,
+                isLoading = false,
+                statusMessage = "Found ${sorted.size} ${filter.title}"
+            )
+        }
+    }
+
+    fun clearDocumentTypeFilter() {
+        _uiState.value = _uiState.value.copy(activeDocumentTypeFilter = null)
+        refreshCurrentDirectory()
+    }
+
+    // --- Fast File Search in Explorer Tab (Current Folder & Whole Storage) ---
     fun onSearchQueryChanged(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
+        if (_uiState.value.activeDocumentTypeFilter != null) {
+            loadDocumentTypeCategory(_uiState.value.activeDocumentTypeFilter!!)
+            return
+        }
+
+        if (_uiState.value.isGlobalSearchActive && query.isNotBlank()) {
+            triggerGlobalSearch(query)
+        }
+    }
+
+    fun toggleGlobalSearch() {
+        val next = !_uiState.value.isGlobalSearchActive
+        _uiState.value = _uiState.value.copy(isGlobalSearchActive = next)
+        if (next && _uiState.value.searchQuery.isNotBlank()) {
+            triggerGlobalSearch(_uiState.value.searchQuery)
+        } else if (!next) {
+            globalSearchJob?.cancel()
+            _uiState.value = _uiState.value.copy(isGlobalSearching = false, globalSearchResults = emptyList())
+        }
+    }
+
+    fun triggerGlobalSearch(query: String) {
+        globalSearchJob?.cancel()
+        val cleanQuery = query.trim()
+        if (cleanQuery.isEmpty()) {
+            _uiState.value = _uiState.value.copy(isGlobalSearching = false, globalSearchResults = emptyList())
+            return
+        }
+
+        globalSearchJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isGlobalSearching = true)
+            val roots = _uiState.value.storageLocations
+                .filter { !it.isSystem }
+                .map { it.path }
+                .ifEmpty { listOf(Environment.getExternalStorageDirectory()?.absolutePath ?: "") }
+
+            val files = withContext(Dispatchers.IO) {
+                FileUtil.searchFilesByNameAcrossStorage(
+                    rootPaths = roots,
+                    query = cleanQuery,
+                    maxResults = 500
+                )
+            }
+
+            val items = withContext(Dispatchers.IO) {
+                files.map { file ->
+                    FileSystemItem(
+                        file = file,
+                        name = file.name,
+                        path = file.absolutePath,
+                        isDirectory = file.isDirectory,
+                        size = if (file.isDirectory) 0L else file.length(),
+                        formattedSize = if (file.isDirectory) "Folder" else FileUtil.formatFileSize(file.length()),
+                        lastModified = file.lastModified(),
+                        category = FileUtil.getFileCategory(file),
+                        tags = emptyList(),
+                        permissions = FileUtil.getPermissionsString(file)
+                    )
+                }
+            }
+
+            val sorted = sortItems(items, _uiState.value.sortMode)
+            _uiState.value = _uiState.value.copy(
+                isGlobalSearching = false,
+                globalSearchResults = sorted
+            )
+        }
     }
 
     fun onTagFilterToggled(tagId: Long) {

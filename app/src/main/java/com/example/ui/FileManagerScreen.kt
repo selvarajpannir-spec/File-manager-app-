@@ -219,64 +219,90 @@ fun FileManagerScreen(
                         .testTag("single_unified_nav_bar")
                 ) {
                     if (isSearchFileNameOpen) {
-                        // INLINE SEARCH FILE NAME MODE
+                        // INLINE SEARCH FILE NAME MODE WITH SCOPE TOGGLE
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                        IconButton(
-                            onClick = {
-                                isSearchFileNameOpen = false
-                                viewModel.onSearchQueryChanged("")
-                            },
-                            modifier = Modifier.size(36.dp).testTag("nav_search_close_btn")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Close search",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        androidx.compose.material3.OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            placeholder = { Text("Search file name...", fontSize = 13.sp) },
-                            singleLine = true,
-                            leadingIcon = {
+                            IconButton(
+                                onClick = {
+                                    isSearchFileNameOpen = false
+                                    viewModel.onSearchQueryChanged("")
+                                },
+                                modifier = Modifier.size(36.dp).testTag("nav_search_close_btn")
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Close search",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
-                            },
-                            trailingIcon = {
-                                if (uiState.searchQuery.isNotEmpty()) {
-                                    IconButton(
-                                        onClick = { viewModel.onSearchQueryChanged("") },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Clear text",
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            androidx.compose.material3.OutlinedTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                                placeholder = {
+                                    Text(
+                                        if (uiState.isGlobalSearchActive) "Search whole storage..." else "Filter in folder...",
+                                        fontSize = 12.sp
+                                    )
+                                },
+                                singleLine = true,
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (uiState.searchQuery.isNotEmpty()) {
+                                            IconButton(
+                                                onClick = { viewModel.onSearchQueryChanged("") },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Clear text",
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
                                     }
-                                }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(50.dp)
-                                .testTag("nav_search_filename_input"),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                    }
-                } else {
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                                    .testTag("nav_search_filename_input"),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            // Storage Scope Toggle Chip (Folder vs All Storage)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (uiState.isGlobalSearchActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier
+                                    .clickable { viewModel.toggleGlobalSearch() }
+                                    .padding(horizontal = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (uiState.isGlobalSearchActive) "🌐 All Storage" else "📁 Folder",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (uiState.isGlobalSearchActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    } else {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -371,16 +397,52 @@ fun FileManagerScreen(
                             DropdownMenu(
                                 expanded = showStorageMenu,
                                 onDismissRequest = { showStorageMenu = false },
-                                modifier = Modifier.width(240.dp)
+                                modifier = Modifier.width(260.dp)
                             ) {
                                 Text(
-                                    text = "Select Storage Partition",
+                                    text = "📂 Show All by File Type",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                HorizontalDivider()
+                                com.example.util.DocumentTypeFilter.entries.forEach { docFilter ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(docFilter.iconEmoji, fontSize = 16.sp)
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = docFilter.title,
+                                                        fontSize = 13.sp,
+                                                        fontWeight = if (uiState.activeDocumentTypeFilter == docFilter) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (uiState.activeDocumentTypeFilter == docFilter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = docFilter.description,
+                                                        fontSize = 9.sp,
+                                                        color = MaterialTheme.colorScheme.outline
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            showStorageMenu = false
+                                            viewModel.loadDocumentTypeCategory(docFilter)
+                                        }
+                                    )
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                Text(
+                                    text = "📱 Storage Partitions & Folders",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                                 uiState.storageLocations.forEach { loc ->
                                     DropdownMenuItem(
                                         text = {
@@ -391,7 +453,7 @@ fun FileManagerScreen(
                                                     Text(
                                                         text = loc.title,
                                                         fontSize = 13.sp,
-                                                        fontWeight = if (uiState.currentPath == loc.path) FontWeight.Bold else FontWeight.Normal
+                                                        fontWeight = if (uiState.currentPath == loc.path && uiState.activeDocumentTypeFilter == null) FontWeight.Bold else FontWeight.Normal
                                                     )
                                                     Text(
                                                         text = loc.path,
@@ -404,6 +466,7 @@ fun FileManagerScreen(
                                         },
                                         onClick = {
                                             showStorageMenu = false
+                                            viewModel.clearDocumentTypeFilter()
                                             viewModel.setActiveTab(FileExplorerTab.BROWSER)
                                             viewModel.loadDirectory(loc.path)
                                         }
@@ -1090,65 +1153,155 @@ private fun FileListContent(
         }
     } else {
         val query = uiState.searchQuery.lowercase(Locale.ROOT)
-        val filteredItems = uiState.currentItems.filter { item ->
-            val matchesQuery = query.isEmpty() || item.name.lowercase(Locale.ROOT).contains(query)
-            val matchesTag = uiState.selectedTagFilterIds.isEmpty() || item.tags.any { it.tagId in uiState.selectedTagFilterIds }
-            matchesQuery && matchesTag
+        val displayItems = if (uiState.isGlobalSearchActive && query.isNotEmpty()) {
+            uiState.globalSearchResults
+        } else {
+            uiState.currentItems.filter { item ->
+                val matchesQuery = query.isEmpty() || item.name.lowercase(Locale.ROOT).contains(query)
+                val matchesTag = uiState.selectedTagFilterIds.isEmpty() || item.tags.any { it.tagId in uiState.selectedTagFilterIds }
+                matchesQuery && matchesTag
+            }
         }
 
-        if (filteredItems.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Folder,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(44.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (query.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()) {
-                            "No items match your criteria."
-                        } else {
-                            "Directory empty or protected."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Dedicated Document Type Filter Ribbon
+            if (uiState.activeDocumentTypeFilter != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(uiState.activeDocumentTypeFilter.iconEmoji, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "${uiState.activeDocumentTypeFilter.title} (${displayItems.size} files)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { viewModel.clearDocumentTypeFilter() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Back to Folders ✕", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testTag("file_list_lazy_column"),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                items(filteredItems, key = { it.path }) { item ->
-                    FileListItem(
-                        item = item,
-                        isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
-                        onClick = {
-                            if (item.isDirectory) {
-                                viewModel.loadDirectory(item.path)
-                            } else {
-                                viewModel.onSelectFileForPreview(item)
+
+            // Global Search Header Ribbon
+            if (uiState.isGlobalSearchActive && query.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (uiState.isGlobalSearching) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                        },
-                        onAddTagClick = { viewModel.openTagSheet(item) },
-                        onOpenWithSystem = { openFileInExternalApp(context, item.file) },
-                        onShare = { shareFile(context, item.file) },
-                        onRename = { viewModel.openRenameDialog(item) },
-                        onShowDetails = { viewModel.openDetailsDialog(item) },
-                        onDelete = { viewModel.deleteItem(item) }
-                    )
+                            Text(
+                                text = if (uiState.isGlobalSearching) "Searching entire storage..." else "🌐 All Storage (${displayItems.size} files found)",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { viewModel.toggleGlobalSearch() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Exit All Storage", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            if (displayItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.size(44.dp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = if (query.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()) {
+                                if (uiState.isGlobalSearchActive) "No files matching \"$query\" found across storage."
+                                else "No files in current folder matching \"$query\"."
+                            } else if (uiState.activeDocumentTypeFilter != null) {
+                                "No ${uiState.activeDocumentTypeFilter.title} found on storage."
+                            } else {
+                                "Directory empty or protected."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        if (query.isNotEmpty() && !uiState.isGlobalSearchActive) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { viewModel.toggleGlobalSearch() }
+                            ) {
+                                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Search Entire Storage", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("file_list_lazy_column"),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    items(displayItems, key = { it.path }) { item ->
+                        FileListItem(
+                            item = item,
+                            isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
+                            onClick = {
+                                if (item.isDirectory) {
+                                    viewModel.clearDocumentTypeFilter()
+                                    viewModel.loadDirectory(item.path)
+                                } else {
+                                    viewModel.onSelectFileForPreview(item)
+                                }
+                            },
+                            onAddTagClick = { viewModel.openTagSheet(item) },
+                            onOpenWithSystem = { openFileInExternalApp(context, item.file) },
+                            onShare = { shareFile(context, item.file) },
+                            onRename = { viewModel.openRenameDialog(item) },
+                            onShowDetails = { viewModel.openDetailsDialog(item) },
+                            onDelete = { viewModel.deleteItem(item) }
+                        )
+                    }
                 }
             }
         }

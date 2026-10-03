@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -552,89 +553,187 @@ fun FullScreenPdfViewer(
     keywords: List<String>
 ) {
     val context = LocalContext.current
-    var firstPageBitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+    var currentPageIndex by remember(file.absolutePath) { mutableIntStateOf(0) }
+    var totalPages by remember(file.absolutePath) { mutableIntStateOf(1) }
+    var pageBitmap by remember(file.absolutePath, currentPageIndex) { mutableStateOf<Bitmap?>(null) }
     var extractedText by remember(file.absolutePath) { mutableStateOf<String?>(null) }
     var isLoading by remember(file.absolutePath) { mutableStateOf(true) }
+    var errorMessage by remember(file.absolutePath) { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(file.absolutePath) {
+    LaunchedEffect(file.absolutePath, currentPageIndex) {
         isLoading = true
-        withContext(Dispatchers.IO) {
-            firstPageBitmap = FileUtil.renderPdfFirstPage(context, uri)
-            extractedText = FileUtil.extractPdfText(file, maxPages = 15)
+        errorMessage = null
+        try {
+            withContext(Dispatchers.IO) {
+                val renderResult = FileUtil.renderPdfPage(context, uri, currentPageIndex)
+                pageBitmap = renderResult.bitmap
+                if (renderResult.pageCount > 0) {
+                    totalPages = renderResult.pageCount
+                }
+                if (renderResult.error != null && renderResult.bitmap == null) {
+                    errorMessage = renderResult.error
+                }
+                if (extractedText == null) {
+                    extractedText = FileUtil.extractPdfText(context, file, maxPages = 20)
+                }
+            }
+        } catch (t: Throwable) {
+            errorMessage = t.message ?: "Failed to render PDF page"
         }
         isLoading = false
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Page Navigation Bar
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
         ) {
-            if (firstPageBitmap != null) {
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
-                ) {
-                    Image(
-                        bitmap = firstPageBitmap!!.asImageBitmap(),
-                        contentDescription = "PDF Page 1",
-                        modifier = Modifier.fillMaxWidth().height(260.dp),
-                        contentScale = ContentScale.Fit
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = null,
+                        tint = Color(0xFFE11D48),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Page ${currentPageIndex + 1} of $totalPages",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            if (currentPageIndex > 0) {
+                                currentPageIndex--
+                            }
+                        },
+                        enabled = currentPageIndex > 0,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Previous Page",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            if (currentPageIndex < totalPages - 1) {
+                                currentPageIndex++
+                            }
+                        },
+                        enabled = currentPageIndex < totalPages - 1,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Next Page",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (pageBitmap != null) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+            ) {
+                Image(
+                    bitmap = pageBitmap!!.asImageBitmap(),
+                    contentDescription = "PDF Page ${currentPageIndex + 1}",
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 320.dp, max = 560.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        } else if (errorMessage != null) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Cannot display PDF graphical page ($errorMessage)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
+        }
 
-            if (!extractedText.isNullOrBlank()) {
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+        if (!extractedText.isNullOrBlank()) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Extracted PDF Text & Search Highlights",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        IconButton(
+                            onClick = {
+                                val clip = ClipData.newPlainText("PDF text", extractedText ?: "")
+                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                cm.setPrimaryClip(clip)
+                                Toast.makeText(context, "Copied PDF text", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(24.dp)
                         ) {
-                            Text(
-                                text = "Extracted PDF Text & Search Results",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-
-                            IconButton(
-                                onClick = {
-                                    val clip = ClipData.newPlainText("PDF text", extractedText ?: "")
-                                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    cm.setPrimaryClip(clip)
-                                    Toast.makeText(context, "Copied PDF text", Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(16.dp))
-                            }
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(16.dp))
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        SelectionContainer {
-                            Text(
-                                text = buildHighlightedText(extractedText ?: "", keywords),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    SelectionContainer {
+                        Text(
+                            text = buildHighlightedText(extractedText ?: "", keywords),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -1147,7 +1246,12 @@ fun FullScreenDocumentViewer(
         isLoading = true
         paragraphs = withContext(Dispatchers.IO) {
             try {
-                FileUtil.readOfficeDocxParagraphs(file)
+                val ext = file.extension.lowercase(Locale.ROOT)
+                if (ext in listOf("pptx", "ppt", "odp")) {
+                    FileUtil.readOfficePptxParagraphs(file)
+                } else {
+                    FileUtil.readOfficeDocxParagraphs(file)
+                }
             } catch (e: Exception) {
                 listOf("Could not parse document: ${e.message}")
             }
@@ -1169,14 +1273,14 @@ fun FullScreenDocumentViewer(
         ) {
             Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(54.dp))
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Word Document (${file.extension.uppercase(Locale.ROOT)})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Document (${file.extension.uppercase(Locale.ROOT)})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
-            Text("This document can be opened in Microsoft Word / Google Docs / Office Reader.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("This file can be opened directly with your preferred Office reader app.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
             androidx.compose.material3.Button(onClick = onOpenExternal) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Open in External Word / Office App")
+                Text("Open in External Office App")
             }
         }
     } else {
@@ -1200,7 +1304,7 @@ fun FullScreenDocumentViewer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "📄 ${paragraphs.size} paragraphs extracted",
+                            text = "📄 ${paragraphs.size} sections extracted",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

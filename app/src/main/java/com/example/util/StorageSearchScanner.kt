@@ -177,7 +177,7 @@ object StorageSearchScanner {
         keywords: List<String>,
         matchAllKeywords: Boolean = false
     ): SearchMatchResult? {
-        if (!file.exists() || !file.canRead() || file.isDirectory) return null
+        if (!file.exists() || file.isDirectory) return null
         val fileNameLower = file.name.lowercase(Locale.ROOT)
         val category = FileUtil.getFileCategory(file)
         val ext = file.extension.lowercase(Locale.ROOT)

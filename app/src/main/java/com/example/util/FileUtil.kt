@@ -125,8 +125,8 @@ object FileUtil {
     }
 
     fun listDirectoryFiles(dir: File, showHidden: Boolean = true): List<File> {
-        if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return emptyList()
-        val files = dir.listFiles() ?: return emptyList()
+        if (!dir.exists() || !dir.isDirectory) return emptyList()
+        val files = try { dir.listFiles() } catch (_: Throwable) { null } ?: return emptyList()
         return files.filter { file ->
             if (!showHidden && file.name.startsWith(".")) false else true
         }.toList()
@@ -717,7 +717,7 @@ object FileUtil {
      * Filters a list of roots to only include top-level disjoint ancestor directories.
      */
     fun getTopLevelRoots(rootPaths: List<String>): List<String> {
-        val existing = rootPaths.map { File(it) }.filter { it.exists() && it.canRead() }
+        val existing = rootPaths.map { File(it) }.filter { it.exists() }
         val result = mutableListOf<File>()
         for (f in existing) {
             val fPath = f.absolutePath
@@ -748,7 +748,7 @@ object FileUtil {
 
         for (rootPath in topRoots) {
             val root = File(rootPath)
-            if (!root.exists() || !root.canRead()) continue
+            if (!root.exists()) continue
 
             val queue = ArrayDeque<File>()
             val visitedDirs = HashSet<String>()
@@ -812,7 +812,7 @@ object FileUtil {
 
         for (rootPath in topRoots) {
             val root = File(rootPath)
-            if (!root.exists() || !root.canRead()) continue
+            if (!root.exists()) continue
 
             val queue = ArrayDeque<File>()
             val visitedDirs = HashSet<String>()

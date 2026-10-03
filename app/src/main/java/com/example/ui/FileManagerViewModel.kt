@@ -292,7 +292,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     fun navigateUp() {
         val current = File(_uiState.value.currentPath)
         val parent = current.parentFile
-        if (parent != null && parent.exists() && parent.canRead()) {
+        if (parent != null && parent.exists() && parent.isDirectory) {
             loadDirectory(parent.absolutePath)
         } else if (_uiState.value.currentPath != "/") {
             loadDirectory("/")

@@ -1292,7 +1292,6 @@ private fun FileListContent(
                             isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
                             onClick = {
                                 if (item.isDirectory) {
-                                    viewModel.clearDocumentTypeFilter()
                                     viewModel.loadDirectory(item.path)
                                 } else {
                                     viewModel.onSelectFileForPreview(item)

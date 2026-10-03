@@ -149,6 +149,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     private var keywordSearchJob: Job? = null
     private var organizeJob: Job? = null
     private var globalSearchJob: Job? = null
+    private var loadDirectoryJob: Job? = null
 
     init {
         val initialPath = Environment.getExternalStorageDirectory()?.absolutePath
@@ -221,11 +222,14 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun refreshStoragePermission(context: Context) {
         val hasPerm = checkStoragePermission(context)
+        val wasPerm = _uiState.value.hasStoragePermission
         _uiState.value = _uiState.value.copy(
             hasStoragePermission = hasPerm,
             showPermissionPromptDialog = if (hasPerm) false else _uiState.value.showPermissionPromptDialog
         )
-        refreshCurrentDirectory()
+        if (!wasPerm && hasPerm) {
+            refreshCurrentDirectory()
+        }
     }
 
     fun dismissPermissionPrompt() {
@@ -249,8 +253,13 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun loadDirectory(path: String, addToHistory: Boolean = true) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        loadDirectoryJob?.cancel()
+        loadDirectoryJob = viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                errorMessage = null,
+                activeDocumentTypeFilter = null
+            )
             val dir = File(path)
             if (!dir.exists()) {
                 _uiState.value = _uiState.value.copy(
@@ -260,7 +269,9 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 return@launch
             }
 
-            val items = repository.getDirectoryItems(path, _uiState.value.showHiddenFiles)
+            val items = withContext(Dispatchers.IO) {
+                repository.getDirectoryItems(path, _uiState.value.showHiddenFiles)
+            }
             val sorted = sortItems(items, _uiState.value.sortMode)
 
             val updatedHistory = if (addToHistory && _uiState.value.currentPath.isNotEmpty() && _uiState.value.currentPath != path) {
@@ -273,8 +284,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 currentPath = path,
                 pathHistory = updatedHistory,
                 currentItems = sorted,
-                isLoading = false,
-                storageStats = FileUtil.getStorageStats()
+                isLoading = false
             )
         }
     }
@@ -391,9 +401,11 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun clearDocumentTypeFilter() {
+    fun clearDocumentTypeFilter(reload: Boolean = true) {
         _uiState.value = _uiState.value.copy(activeDocumentTypeFilter = null)
-        refreshCurrentDirectory()
+        if (reload) {
+            refreshCurrentDirectory()
+        }
     }
 
     // --- Fast File Search in Explorer Tab (Current Folder & Whole Storage) ---

@@ -145,24 +145,27 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     private var organizeJob: Job? = null
 
     init {
-        val locations = FileUtil.getAvailableStorageLocations(application)
-        val stats = FileUtil.getStorageStats()
-
-        val initialPath = locations.firstOrNull { it.path == Environment.getExternalStorageDirectory()?.absolutePath }?.path
-            ?: locations.firstOrNull { it.path == "/" }?.path
+        val initialPath = Environment.getExternalStorageDirectory()?.absolutePath
             ?: application.filesDir.absolutePath
-
         val hasPerm = checkStoragePermission(application)
 
         _uiState.value = _uiState.value.copy(
             currentPath = initialPath,
-            storageLocations = locations,
-            storageStats = stats,
             hasStoragePermission = hasPerm,
             showPermissionPromptDialog = false
         )
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            val locations = FileUtil.getAvailableStorageLocations(application)
+            val stats = FileUtil.getStorageStats()
+            
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(
+                    storageLocations = locations,
+                    storageStats = stats
+                )
+            }
+
             repository.initializeDefaultTagsAndCleanupSamples(application)
             loadDirectory(initialPath)
         }

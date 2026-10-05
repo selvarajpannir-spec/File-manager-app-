@@ -14,9 +14,11 @@ import com.example.service.NotificationActionReceiver
 
 object NotificationHelper {
     const val CHANNEL_ID = "keyword_search_channel"
-    const val FOREGROUND_CHANNEL_ID = "keyword_search_foreground_channel"
-    const val NOTIFICATION_ID = 1001
-    const val FOREGROUND_NOTIFICATION_ID = 2001
+    const val SEARCH_NOTIFICATION_ID = 2001
+    // Backward compatibility aliases
+    const val FOREGROUND_NOTIFICATION_ID = SEARCH_NOTIFICATION_ID
+    const val NOTIFICATION_ID = SEARCH_NOTIFICATION_ID
+
     const val EXTRA_TARGET_TAB = "extra_target_tab"
     const val TAB_KEYWORD_SEARCH = "KEYWORD_SEARCH"
 
@@ -25,31 +27,20 @@ object NotificationHelper {
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-            // 1. Completion notifications channel (swipeable)
-            val completionChannel = NotificationChannel(
+            val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Search Completed Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Alerts when deep multi-format storage scans finish or results are found"
-            }
-            notificationManager.createNotificationChannel(completionChannel)
-
-            // 2. Foreground scanning progress channel (Ongoing progress)
-            val progressChannel = NotificationChannel(
-                FOREGROUND_CHANNEL_ID,
-                "Deep Search Progress",
+                "Deep Search Status",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows live progress bar and scanning percentage widget in notification bar"
+                description = "Shows live search progress and completion results"
                 setShowBadge(false)
             }
-            notificationManager.createNotificationChannel(progressChannel)
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
     /**
-     * Builds the active foreground scanning notification widget with live progress and a Cancel/Stop action.
+     * Builds the active scanning progress notification.
      */
     fun buildProgressNotification(
         context: Context,
@@ -68,7 +59,7 @@ object NotificationHelper {
 
         val pendingTapIntent = PendingIntent.getActivity(
             context,
-            FOREGROUND_NOTIFICATION_ID,
+            SEARCH_NOTIFICATION_ID,
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -78,9 +69,9 @@ object NotificationHelper {
         val keywordsText = keywords.joinToString(", ")
         val title = "Scanning Storage: $percent%"
         val summaryLine = "$scannedCount files checked • $foundCount match(es) found"
-        val bigText = "$summaryLine\nKeywords: \"$keywordsText\"\nTap to view live results or ❌ to stop."
+        val bigText = "$summaryLine\nKeywords: \"$keywordsText\"\nTap to view live results or Cancel to stop."
 
-        return NotificationCompat.Builder(context, FOREGROUND_CHANNEL_ID)
+        return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_search)
             .setContentTitle(title)
             .setContentText(summaryLine)
@@ -100,7 +91,8 @@ object NotificationHelper {
     }
 
     /**
-     * Shows a completed notification that is SWIPEABLE (not ongoing) and has an explicit ❌ Dismiss action.
+     * Updates the existing notification in-place to the completed state.
+     * Marks it as non-ongoing (swipeable) and dismissable.
      */
     fun showSearchCompletedNotification(
         context: Context,
@@ -110,9 +102,6 @@ object NotificationHelper {
     ) {
         createNotificationChannel(context)
 
-        // Cancel the ongoing progress notification immediately so it doesn't hang
-        cancelForegroundNotification(context)
-
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra(EXTRA_TARGET_TAB, TAB_KEYWORD_SEARCH)
@@ -120,12 +109,12 @@ object NotificationHelper {
 
         val pendingTapIntent = PendingIntent.getActivity(
             context,
-            NOTIFICATION_ID,
+            SEARCH_NOTIFICATION_ID,
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val dismissPendingIntent = createDismissPendingIntent(context, NOTIFICATION_ID)
+        val dismissPendingIntent = createDismissPendingIntent(context, SEARCH_NOTIFICATION_ID)
 
         val keywordsText = keywords.joinToString(", ")
         val title = if (foundCount > 0) {
@@ -148,7 +137,7 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingTapIntent)
             .setDeleteIntent(dismissPendingIntent)
-            .setOngoing(false) // Allows swipe to close
+            .setOngoing(false) // Non-ongoing: allows swipe to close
             .setAutoCancel(true) // Dismiss on tap
             .addAction(
                 android.R.drawable.ic_menu_view,
@@ -163,14 +152,14 @@ object NotificationHelper {
 
         try {
             val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.notify(NOTIFICATION_ID, builder.build())
+            notificationManager.notify(SEARCH_NOTIFICATION_ID, builder.build())
         } catch (e: SecurityException) {
             // Permission not granted
         }
     }
 
     /**
-     * Shows a swipeable "Search Cancelled" notification.
+     * Updates the notification in-place to the cancelled state.
      */
     fun showSearchCancelledNotification(
         context: Context,
@@ -178,9 +167,8 @@ object NotificationHelper {
         scannedCount: Int
     ) {
         createNotificationChannel(context)
-        cancelForegroundNotification(context)
 
-        val dismissPendingIntent = createDismissPendingIntent(context, NOTIFICATION_ID)
+        val dismissPendingIntent = createDismissPendingIntent(context, SEARCH_NOTIFICATION_ID)
 
         val keywordsText = keywords.joinToString(", ")
         val title = "🚫 Scan Cancelled"
@@ -193,7 +181,7 @@ object NotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setDeleteIntent(dismissPendingIntent)
-            .setOngoing(false) // Allows swipe to close
+            .setOngoing(false) // Non-ongoing: allows swipe to close
             .setAutoCancel(true)
             .addAction(
                 android.R.drawable.ic_menu_close_clear_cancel,
@@ -203,24 +191,20 @@ object NotificationHelper {
 
         try {
             val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.notify(NOTIFICATION_ID, builder.build())
+            notificationManager.notify(SEARCH_NOTIFICATION_ID, builder.build())
         } catch (e: SecurityException) {
             // Permission not granted
         }
     }
 
     fun cancelForegroundNotification(context: Context) {
-        try {
-            val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.cancel(FOREGROUND_NOTIFICATION_ID)
-        } catch (_: Exception) {}
+        cancelAllSearchNotifications(context)
     }
 
     fun cancelAllSearchNotifications(context: Context) {
         try {
             val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.cancel(FOREGROUND_NOTIFICATION_ID)
-            notificationManager.cancel(NOTIFICATION_ID)
+            notificationManager.cancel(SEARCH_NOTIFICATION_ID)
         } catch (_: Exception) {}
     }
 
@@ -236,7 +220,7 @@ object NotificationHelper {
         )
     }
 
-    fun createDismissPendingIntent(context: Context, notificationId: Int): PendingIntent {
+    fun createDismissPendingIntent(context: Context, notificationId: Int = SEARCH_NOTIFICATION_ID): PendingIntent {
         val dismissIntent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = NotificationActionReceiver.ACTION_DISMISS_NOTIFICATION
             putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)

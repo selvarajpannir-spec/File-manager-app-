@@ -90,6 +90,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1238,17 +1239,20 @@ private fun FileListContent(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.widthIn(max = 480.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Folder,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outlineVariant,
-                            modifier = Modifier.size(44.dp)
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            modifier = Modifier.size(52.dp)
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = if (query.isNotEmpty() || uiState.selectedTagFilterIds.isNotEmpty()) {
                                 if (uiState.isGlobalSearchActive) "No files matching \"$query\" found across storage."
@@ -1256,20 +1260,66 @@ private fun FileListContent(
                             } else if (uiState.activeDocumentTypeFilter != null) {
                                 "No ${uiState.activeDocumentTypeFilter.title} found on storage."
                             } else {
-                                "Directory empty or protected."
+                                "This folder currently has no files."
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (uiState.activeDocumentTypeFilter != null || query.isNotEmpty()) {
+                                "Try searching all storage partitions or clearing the active filter."
+                            } else {
+                                "Add realistic demo documents, create a file, or create a new folder to get started."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         if (query.isNotEmpty() && !uiState.isGlobalSearchActive) {
-                            Spacer(modifier = Modifier.height(10.dp))
                             Button(
-                                onClick = { viewModel.toggleGlobalSearch() }
+                                onClick = { viewModel.toggleGlobalSearch() },
+                                modifier = Modifier.fillMaxWidth(0.85f).testTag("empty_search_storage_btn")
                             ) {
                                 Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Search Entire Storage", fontSize = 12.sp)
+                                Text("Search Entire Storage", fontSize = 13.sp)
+                            }
+                        } else if (uiState.activeDocumentTypeFilter == null) {
+                            Button(
+                                onClick = { viewModel.seedSampleFilesToCurrentDirectory() },
+                                modifier = Modifier.fillMaxWidth(0.9f).testTag("empty_seed_sample_files_btn")
+                            ) {
+                                Text("✨ Add Demo Files (PDF, CSV, Code, MD)", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(0.9f),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.openCreateFileDialog() },
+                                    modifier = Modifier.weight(1f).testTag("empty_new_file_btn")
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("+ File", fontSize = 12.sp)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.openCreateFolderDialog() },
+                                    modifier = Modifier.weight(1f).testTag("empty_new_folder_btn")
+                                ) {
+                                    Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("+ Folder", fontSize = 12.sp)
+                                }
                             }
                         }
                     }

@@ -253,39 +253,58 @@ class FileManagerRepository(
     }
 
     /**
-     * Initializes default color tags and cleans up any previously generated sample files.
+     * Initializes default color tags and seeds workspace files for seamless out-of-the-box usage.
      */
     suspend fun initializeDefaultTagsAndCleanupSamples(context: Context) = withContext(Dispatchers.IO) {
         // Ensure default useful tags exist
-        createNewTag("system", "#EF4444")
-        createNewTag("config", "#F59E0B")
-        createNewTag("important", "#EC4899")
-        createNewTag("media", "#8B5CF6")
-        createNewTag("code", "#3B82F6")
-        createNewTag("docs", "#10B981")
-        createNewTag("work", "#6366F1")
-        createNewTag("download", "#0EA5E9")
+        val tagSys = createNewTag("system", "#EF4444")
+        val tagConfig = createNewTag("config", "#F59E0B")
+        val tagImportant = createNewTag("important", "#EC4899")
+        val tagMedia = createNewTag("media", "#8B5CF6")
+        val tagCode = createNewTag("code", "#3B82F6")
+        val tagDocs = createNewTag("docs", "#10B981")
+        val tagWork = createNewTag("work", "#6366F1")
+        val tagDownload = createNewTag("download", "#0EA5E9")
 
-        // Actively remove all sample files created previously
+        // Seed rich documents into App Storage so files are always available
         try {
-            val sampleNotesFile = File(context.filesDir, "system_storage_notes.txt")
-            if (sampleNotesFile.exists()) {
-                sampleNotesFile.delete()
-            }
-            val samplePdfFile = File(context.filesDir, "file_manager_guide.pdf")
-            if (samplePdfFile.exists()) {
-                samplePdfFile.delete()
-            }
+            FileUtil.seedSampleWorkspaceFiles(context.filesDir)
 
-            // Clean up DB entries for sample files
-            val sampleDbFiles = fileDao.getSampleFiles()
-            for (sample in sampleDbFiles) {
-                fileDao.deleteTagCrossRefsForFile(sample.id)
-                fileDao.deleteFts(sample.id)
-                fileDao.deleteFileById(sample.id)
+            // Also seed into Documents and Downloads if accessible
+            try {
+                val docDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS)
+                if (docDir != null) FileUtil.seedSampleWorkspaceFiles(docDir)
+            } catch (_: Throwable) {}
+
+            try {
+                val downDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                if (downDir != null) FileUtil.seedSampleWorkspaceFiles(downDir)
+            } catch (_: Throwable) {}
+
+            // Index files in app storage and assign starter tags
+            val appFiles = FileUtil.listDirectoryFiles(context.filesDir)
+            for (f in appFiles) {
+                if (f.isFile) {
+                    val fileId = getOrInsertFileEntityForPath(f)
+                    when (f.extension.lowercase(Locale.ROOT)) {
+                        "pdf" -> {
+                            fileDao.insertFileTagCrossRef(FileTagCrossRef(fileId, tagDocs))
+                            fileDao.insertFileTagCrossRef(FileTagCrossRef(fileId, tagImportant))
+                        }
+                        "py", "kt", "js" -> {
+                            fileDao.insertFileTagCrossRef(FileTagCrossRef(fileId, tagCode))
+                        }
+                        "json", "log" -> {
+                            fileDao.insertFileTagCrossRef(FileTagCrossRef(fileId, tagConfig))
+                        }
+                        "csv", "txt", "md" -> {
+                            fileDao.insertFileTagCrossRef(FileTagCrossRef(fileId, tagWork))
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Cleanup sample files: ${e.message}")
+            Log.w(TAG, "Seed sample files initialization: ${e.message}")
         }
     }
 

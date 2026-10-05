@@ -3,7 +3,6 @@ package com.example.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.core.app.NotificationManagerCompat
 import com.example.util.NotificationHelper
 
 class NotificationActionReceiver : BroadcastReceiver() {
@@ -18,17 +17,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val action = intent?.action ?: return
         when (action) {
             ACTION_CANCEL_SCAN -> {
-                // Cancel ongoing deep search service and clear ongoing notification
                 DeepSearchForegroundService.cancelSearch(context)
-                val notificationManager = NotificationManagerCompat.from(context)
-                notificationManager.cancel(NotificationHelper.FOREGROUND_NOTIFICATION_ID)
-                notificationManager.cancel(NotificationHelper.NOTIFICATION_ID)
+                NotificationHelper.cancelAllSearchNotifications(context)
             }
             ACTION_DISMISS_NOTIFICATION -> {
-                val notifId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, NotificationHelper.NOTIFICATION_ID)
-                val notificationManager = NotificationManagerCompat.from(context)
-                notificationManager.cancel(notifId)
-                notificationManager.cancel(NotificationHelper.FOREGROUND_NOTIFICATION_ID)
+                NotificationHelper.cancelAllSearchNotifications(context)
             }
         }
     }

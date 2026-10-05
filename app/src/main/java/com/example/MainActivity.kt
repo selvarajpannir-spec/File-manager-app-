@@ -45,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.FileExplorerTab
 import com.example.ui.FileManagerScreen
 import com.example.ui.FileManagerViewModel
+import com.example.ui.components.StoragePermissionGateScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.util.AppSettings
 import com.example.util.NotificationHelper
@@ -98,7 +99,9 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val viewModel: FileManagerViewModel = viewModel()
                     activeViewModel = viewModel
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+                    // Initiate Android file permissions check-up on start-up
                     LaunchedEffect(Unit) {
                         checkAndLeadToStoragePermission()
                     }
@@ -125,7 +128,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    FileManagerScreen(viewModel = viewModel)
+                    // Do not open the app file explorer until permission is granted
+                    if (!uiState.hasStoragePermission) {
+                        StoragePermissionGateScreen(
+                            onRequestPermission = { requestStorageAccess() },
+                            onRecheckPermission = { viewModel.refreshStoragePermission(context) }
+                        )
+                    } else {
+                        FileManagerScreen(viewModel = viewModel)
+                    }
 
                     // Exit Confirmation Window / Dialog
                     if (showExitConfirmDialog) {
@@ -232,17 +243,15 @@ class MainActivity : ComponentActivity() {
         if (hasPromptedStorageOnOpen) return
         hasPromptedStorageOnOpen = true
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            val permissions = arrayOf(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            )
-            val needed = permissions.filter {
-                ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-            }
-            if (needed.isNotEmpty()) {
-                legacyStorageLauncher.launch(needed.toTypedArray())
-            }
+        val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (!isGranted) {
+            requestStorageAccess()
         }
     }
 }

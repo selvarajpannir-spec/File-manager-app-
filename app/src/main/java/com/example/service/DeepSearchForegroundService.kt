@@ -117,7 +117,7 @@ class DeepSearchForegroundService : Service() {
         currentKeywords = keywords
         val cancelPendingIntent = NotificationHelper.createCancelPendingIntent(this)
 
-        // 1. Enter Foreground Mode immediately
+        // 1. Enter Foreground Mode with unified notification ID
         val initialNotification = NotificationHelper.buildProgressNotification(
             context = this,
             keywords = keywords,
@@ -130,12 +130,12 @@ class DeepSearchForegroundService : Service() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(
-                    NotificationHelper.FOREGROUND_NOTIFICATION_ID,
+                    NotificationHelper.SEARCH_NOTIFICATION_ID,
                     initialNotification,
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                 )
             } else {
-                startForeground(NotificationHelper.FOREGROUND_NOTIFICATION_ID, initialNotification)
+                startForeground(NotificationHelper.SEARCH_NOTIFICATION_ID, initialNotification)
             }
         } catch (e: Exception) {
             Log.e(TAG, "startForeground error: ${e.message}", e)
@@ -156,7 +156,7 @@ class DeepSearchForegroundService : Service() {
         scanJob?.cancel()
         scanJob = serviceScope.launch {
             var lastNotificationUpdateTime = 0L
-            val estimatedMaxFiles = 800 // Base for smooth progress calculation
+            val estimatedMaxFiles = 800
 
             try {
                 val results = StorageSearchScanner.searchStorage(
@@ -177,7 +177,7 @@ class DeepSearchForegroundService : Service() {
                             progressPercent = percent
                         )
 
-                        // Throttle notification updates smoothly (~350ms)
+                        // Throttle notification updates (~350ms)
                         val now = System.currentTimeMillis()
                         if (now - lastNotificationUpdateTime > 350) {
                             lastNotificationUpdateTime = now
@@ -197,7 +197,7 @@ class DeepSearchForegroundService : Service() {
                             foundCount = updated.size
                         )
 
-                        // Immediately update notification when a new match is discovered
+                        // Immediately update notification when new match is found
                         updateProgressNotification(
                             keywords,
                             currentScanned,
@@ -208,24 +208,33 @@ class DeepSearchForegroundService : Service() {
                     }
                 )
 
+                val finalScanned = _searchState.value.scannedCount
                 _searchState.value = DeepSearchServiceState(
                     isRunning = false,
                     keywords = keywords,
-                    scannedCount = _searchState.value.scannedCount,
+                    scannedCount = finalScanned,
                     foundCount = results.size,
                     progressPercent = 100,
                     results = results,
                     isFinished = true,
                     isCancelled = false,
-                    statusMessage = "Found ${results.size} match(es) across ${_searchState.value.scannedCount} files."
+                    statusMessage = "Found ${results.size} match(es) across $finalScanned files."
                 )
 
-                // Show completed swipeable alert notification
+                // 1. Detach notification from Foreground Service so it becomes swipeable/dismissable
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_DETACH)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(false)
+                }
+
+                // 2. Update the EXACT SAME notification ID in-place to the completed swipeable state
                 NotificationHelper.showSearchCompletedNotification(
                     context = applicationContext,
                     keywords = keywords,
                     foundCount = results.size,
-                    scannedCount = _searchState.value.scannedCount
+                    scannedCount = finalScanned
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Search error: ${e.message}", e)
@@ -234,9 +243,14 @@ class DeepSearchForegroundService : Service() {
                     isFinished = true,
                     statusMessage = "Search ended: ${e.message}"
                 )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                NotificationHelper.cancelAllSearchNotifications(applicationContext)
             } finally {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                NotificationHelper.cancelForegroundNotification(applicationContext)
                 stopSelf()
             }
         }
@@ -259,7 +273,7 @@ class DeepSearchForegroundService : Service() {
         )
         try {
             val notificationManager = NotificationManagerCompat.from(this)
-            notificationManager.notify(NotificationHelper.FOREGROUND_NOTIFICATION_ID, notification)
+            notificationManager.notify(NotificationHelper.SEARCH_NOTIFICATION_ID, notification)
         } catch (e: SecurityException) {
             Log.w(TAG, "Notification permission missing: ${e.message}")
         }
@@ -276,8 +290,14 @@ class DeepSearchForegroundService : Service() {
             statusMessage = "Search cancelled by user."
         )
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        NotificationHelper.cancelForegroundNotification(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+
+        NotificationHelper.cancelAllSearchNotifications(this)
 
         if (keywords.isNotEmpty()) {
             NotificationHelper.showSearchCancelledNotification(
@@ -292,15 +312,19 @@ class DeepSearchForegroundService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        // When user swipes the app away / closes it, cleanly cancel and remove ongoing notification
         try {
             scanJob?.cancel()
             _searchState.value = _searchState.value.copy(
                 isRunning = false,
                 isCancelled = true
             )
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            NotificationHelper.cancelForegroundNotification(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            NotificationHelper.cancelAllSearchNotifications(this)
             stopSelf()
         } catch (e: Exception) {
             Log.e(TAG, "Error cleaning up onTaskRemoved: ${e.message}", e)
@@ -311,7 +335,12 @@ class DeepSearchForegroundService : Service() {
         super.onDestroy()
         scanJob?.cancel()
         serviceScope.cancel()
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        NotificationHelper.cancelForegroundNotification(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        NotificationHelper.cancelAllSearchNotifications(this)
     }
 }

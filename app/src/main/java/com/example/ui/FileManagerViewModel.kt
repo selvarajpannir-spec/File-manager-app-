@@ -216,7 +216,10 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
-            true
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -348,6 +351,8 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.value = _uiState.value.copy(activeTab = tab)
         if (tab == FileExplorerTab.BROWSER) {
             refreshCurrentDirectory()
+        } else if (tab == FileExplorerTab.KEYWORD_SEARCH) {
+            NotificationHelper.cancelAllSearchNotifications(getApplication())
         }
     }
 
@@ -793,6 +798,21 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 repository.importDocumentUri(uri, context, _uiState.value.currentPath)
             }
             _uiState.value = _uiState.value.copy(isLoading = false, statusMessage = "Imported ${uris.size} file(s)")
+            refreshCurrentDirectory()
+        }
+    }
+
+    fun seedSampleFilesToCurrentDirectory() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            val currentTarget = File(_uiState.value.currentPath)
+            withContext(Dispatchers.IO) {
+                FileUtil.seedSampleWorkspaceFiles(currentTarget)
+            }
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                statusMessage = "Added sample demo files (PDF, CSV, Python, Markdown, Logs)!"
+            )
             refreshCurrentDirectory()
         }
     }

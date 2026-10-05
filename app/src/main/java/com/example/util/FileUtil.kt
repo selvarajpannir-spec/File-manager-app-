@@ -854,6 +854,216 @@ object FileUtil {
         }
         return results
     }
+
+    /**
+     * Generates a native valid PDF document for testing and previews.
+     */
+    fun createSamplePdf(file: File, title: String, content: String) {
+        try {
+            val document = android.graphics.pdf.PdfDocument()
+            val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
+            val page = document.startPage(pageInfo)
+            val canvas = page.canvas
+
+            val bannerPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.rgb(37, 99, 235)
+            }
+            canvas.drawRect(0f, 0f, 595f, 44f, bannerPaint)
+
+            val headerPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 15f
+                isFakeBoldText = true
+                isAntiAlias = true
+            }
+            canvas.drawText("File Manager Pro • Verified Document", 24f, 28f, headerPaint)
+
+            val titlePaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.rgb(15, 23, 42)
+                textSize = 20f
+                isFakeBoldText = true
+                isAntiAlias = true
+            }
+            canvas.drawText(title, 28f, 90f, titlePaint)
+
+            val textPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.rgb(51, 65, 85)
+                textSize = 12.5f
+                isAntiAlias = true
+            }
+
+            var y = 125f
+            for (line in content.split("\n")) {
+                canvas.drawText(line.trim(), 28f, y, textPaint)
+                y += 22f
+                if (y > 800f) break
+            }
+
+            document.finishPage(page)
+            file.outputStream().use { out ->
+                document.writeTo(out)
+            }
+            document.close()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed creating sample PDF: ${e.message}")
+        }
+    }
+
+    /**
+     * Seeds rich, interactive demo files into a target directory so the user immediately has
+     * real documents, spreadsheets, code, and text files to browse, preview, and search.
+     */
+    fun seedSampleWorkspaceFiles(targetDir: File) {
+        try {
+            if (!targetDir.exists()) {
+                targetDir.mkdirs()
+            }
+
+            // 1. QuickStart Guide TXT
+            val quickStart = File(targetDir, "QuickStart_Guide.txt")
+            if (!quickStart.exists()) {
+                quickStart.writeText(
+                    """
+                    === File Manager Pro: Quick Start ===
+                    
+                    Welcome to your comprehensive file management utility!
+                    
+                    Key Features:
+                    - 🚀 Instant File & Folder Navigation
+                    - 📄 Built-in PDF, Image, Audio, Code & Text Preview
+                    - 🔍 Deep Keyword & Content Search across all storage
+                    - 🏷️ Color-coded Tags & Categorization
+                    - 📊 Real-time Storage Partition Analytics
+                    - 📦 Dedicated Document Categories (PDF, Word, Excel, Code, etc.)
+                    
+                    Keywords for deep search: invoice, contract, budget, database, security, report.
+                    """.trimIndent()
+                )
+            }
+
+            // 2. Project Proposal PDF
+            val pdfFile = File(targetDir, "Project_Proposal_2026.pdf")
+            if (!pdfFile.exists()) {
+                createSamplePdf(
+                    pdfFile,
+                    "Executive Project Proposal & Overview 2026",
+                    """
+                    1. Project Objective:
+                    Deliver an ultra-responsive, modern Material 3 File Manager for Android.
+                    
+                    2. Key Highlights:
+                    - Deep search engine with background service notifications
+                    - Multi-category document explorer (PDF, CSV, Python, Markdown)
+                    - Hex preview for binary files and audio waveform player
+                    - Zero UI freezing with asynchronous background pipelines
+                    
+                    3. Financial Budget:
+                    Estimated budget allocation: $45,000 for Q1 infrastructure and audits.
+                    
+                    4. Confidentiality & Security:
+                    All documents protected by device-level sandboxing and Scoped Storage.
+                    """.trimIndent()
+                )
+            }
+
+            // 3. Financial Spreadsheet CSV
+            val csvFile = File(targetDir, "Quarterly_Budget_Report.csv")
+            if (!csvFile.exists()) {
+                csvFile.writeText(
+                    """
+                    Department,Category,Quarter,Budget ($),Actual ($),Variance ($)
+                    Engineering,Cloud Infrastructure,Q1,15000,14200,800
+                    Engineering,Tooling & SDKs,Q1,6000,5800,200
+                    Design,Asset Licenses,Q1,4500,4100,400
+                    Security,Vulnerability Audit,Q1,8500,8500,0
+                    Operations,Office & Logistics,Q1,11000,10500,500
+                    """.trimIndent()
+                )
+            }
+
+            // 4. Python Data Processor Code
+            val pyFile = File(targetDir, "Data_Processor.py")
+            if (!pyFile.exists()) {
+                pyFile.writeText(
+                    """
+                    # Data Processor & Analytics Module
+                    import os
+                    import sys
+                    import json
+
+                    def authenticate_api_session(api_token: str) -> bool:
+                        print("Connecting to secure analytics endpoint...")
+                        return len(api_token) > 16
+
+                    def process_dataset(filepath: str):
+                        if not os.path.exists(filepath):
+                            raise FileNotFoundError(f"Missing dataset at {filepath}")
+                        print(f"Reading records from {filepath}")
+
+                    if __name__ == "__main__":
+                        print("Initializing Data Processor pipeline...")
+                    """.trimIndent()
+                )
+            }
+
+            // 5. Application Configuration JSON
+            val jsonFile = File(targetDir, "AppConfig_Settings.json")
+            if (!jsonFile.exists()) {
+                jsonFile.writeText(
+                    """
+                    {
+                      "appName": "FileManagerPro",
+                      "version": "2.4.0",
+                      "features": {
+                        "deepSearch": true,
+                        "audioPlayback": true,
+                        "pdfRendering": true,
+                        "autoOrganize": true
+                      },
+                      "database": {
+                        "syncIntervalMinutes": 15,
+                        "maxCachedSnippets": 1000
+                      }
+                    }
+                    """.trimIndent()
+                )
+            }
+
+            // 6. Markdown Technical Specification
+            val mdFile = File(targetDir, "Architecture_Notes.md")
+            if (!mdFile.exists()) {
+                mdFile.writeText(
+                    """
+                    # System Architecture & Technical Specifications
+                    
+                    ## Core Modules
+                    - **FileManagerRepository**: Single source of truth for filesystem and SQLite Room tags.
+                    - **DeepSearchScanner**: High-speed multi-threaded content scanner with regex and substring matchers.
+                    - **TopPreviewCard**: Dynamic 40% preview pane showing PDF pages, hex dumps, and audio controls.
+                    
+                    ## Performance Targets
+                    - Startup latency < 100ms
+                    - Search speed > 500 files/sec
+                    """.trimIndent()
+                )
+            }
+
+            // 7. Network Security Log
+            val logFile = File(targetDir, "Security_Audit.log")
+            if (!logFile.exists()) {
+                logFile.writeText(
+                    """
+                    [2026-10-03 08:12:01] INFO [AuthService] User session initialized. IP: 192.168.1.45
+                    [2026-10-03 08:15:22] INFO [StorageEngine] Indexing complete. 48 items verified.
+                    [2026-10-03 08:22:10] WARN [NetworkSecurity] Certificate verified via TLS 1.3
+                    [2026-10-03 08:30:00] INFO [Database] Vacuum and FTS index optimized successfully.
+                    """.trimIndent()
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Seed sample files: ${e.message}")
+        }
+    }
 }
 
 data class PdfRenderResult(

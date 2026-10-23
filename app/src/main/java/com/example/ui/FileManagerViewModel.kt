@@ -110,6 +110,7 @@ data class FileUiState(
     val showCreateFileDialog: Boolean = false,
     val showFontSizeDialog: Boolean = false,
     val showPermissionPromptDialog: Boolean = false,
+    val selectedFilePaths: Set<String> = emptySet(),
     val storageStats: StorageStats = StorageStats(0, 0, 0, 0),
     val storageLocations: List<StorageLocation> = emptyList(),
     val errorMessage: String? = null,
@@ -152,17 +153,45 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     private var loadDirectoryJob: Job? = null
 
     init {
-        val initialPath = Environment.getExternalStorageDirectory()?.absolutePath
-            ?: application.filesDir.absolutePath
+        // Memory restoration: Recall where user exited last time (folder, file, tab)
+        val savedPath = appSettings.getLastOpenedPath()
+        val initialPath = if (!savedPath.isNullOrBlank() && File(savedPath).exists() && File(savedPath).isDirectory) {
+            savedPath
+        } else {
+            Environment.getExternalStorageDirectory()?.absolutePath
+                ?: application.filesDir.absolutePath
+        }
+
+        val savedTabName = appSettings.getLastActiveTab()
+        val initialTab = if (!savedTabName.isNullOrBlank()) {
+            try {
+                FileExplorerTab.valueOf(savedTabName)
+            } catch (_: Exception) {
+                FileExplorerTab.BROWSER
+            }
+        } else {
+            FileExplorerTab.BROWSER
+        }
+
+        val savedFilePath = appSettings.getLastSelectedFilePath()
+        val initialPreviewItem = if (!savedFilePath.isNullOrBlank()) {
+            val f = File(savedFilePath)
+            if (f.exists() && f.isFile) {
+                FileSystemItem(file = f, tags = emptyList(), dbFileId = null)
+            } else null
+        } else null
+
         val hasPerm = checkStoragePermission(application)
 
         _uiState.value = _uiState.value.copy(
             currentPath = initialPath,
+            activeTab = initialTab,
+            selectedItemForPreview = initialPreviewItem,
             hasStoragePermission = hasPerm,
             showPermissionPromptDialog = false
         )
 
-        // 1. Instant Startup: Load initial directory immediately
+        // 1. Instant Startup: Load remembered directory immediately
         loadDirectory(initialPath, addToHistory = false)
 
         // 2. Background task: Load storage partitions and stats non-blockingly
@@ -256,6 +285,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun loadDirectory(path: String, addToHistory: Boolean = true) {
+        if (path.isBlank()) return
         loadDirectoryJob?.cancel()
         loadDirectoryJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -271,6 +301,9 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 return@launch
             }
+
+            // Save last opened directory path for memory restoration
+            appSettings.setLastOpenedPath(path)
 
             val items = withContext(Dispatchers.IO) {
                 repository.getDirectoryItems(path, _uiState.value.showHiddenFiles)
@@ -297,8 +330,12 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
         val parent = current.parentFile
         if (parent != null && parent.exists() && parent.isDirectory) {
             loadDirectory(parent.absolutePath)
-        } else if (_uiState.value.currentPath != "/") {
-            loadDirectory("/")
+        } else {
+            val fallback = Environment.getExternalStorageDirectory()?.absolutePath
+                ?: getApplication<Application>().filesDir.absolutePath
+            if (_uiState.value.currentPath != fallback) {
+                loadDirectory(fallback)
+            }
         }
     }
 
@@ -324,8 +361,14 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun refreshCurrentDirectory() {
-        if (_uiState.value.currentPath.isNotEmpty()) {
-            loadDirectory(_uiState.value.currentPath, addToHistory = false)
+        val cat = _uiState.value.activeDocumentTypeFilter
+        if (cat != null) {
+            loadDocumentTypeCategory(cat)
+        } else if (_uiState.value.currentPath.isNotEmpty()) {
+            val d = File(_uiState.value.currentPath)
+            if (d.exists() && d.isDirectory) {
+                loadDirectory(_uiState.value.currentPath, addToHistory = false)
+            }
         }
     }
 
@@ -349,6 +392,7 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setActiveTab(tab: FileExplorerTab) {
         _uiState.value = _uiState.value.copy(activeTab = tab)
+        appSettings.setLastActiveTab(tab.name)
         if (tab == FileExplorerTab.BROWSER) {
             refreshCurrentDirectory()
         } else if (tab == FileExplorerTab.KEYWORD_SEARCH) {
@@ -641,6 +685,8 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             selectedItemForPreview = item,
             lastScannedKeywords = if (keywords.isNotEmpty()) keywords else _uiState.value.lastScannedKeywords
         )
+        // Keep in memory where user exit (file)
+        appSettings.setLastSelectedFilePath(item?.path)
         if (item == null) {
             audioManager.stop()
         }
@@ -756,10 +802,16 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             if (_uiState.value.selectedItemForPreview?.path == item.path) {
                 _uiState.value = _uiState.value.copy(selectedItemForPreview = null)
                 audioManager.stop()
+                appSettings.setLastSelectedFilePath(null)
             }
+            val updatedSelected = _uiState.value.selectedFilePaths - item.path
             val success = repository.deleteFileOrFolder(item.file)
             if (success) {
+                // Immediate in-memory update ensures screen strictly remains on the same page with no root folder reset
+                val updatedItems = _uiState.value.currentItems.filter { it.path != item.path }
                 _uiState.value = _uiState.value.copy(
+                    currentItems = updatedItems,
+                    selectedFilePaths = updatedSelected,
                     statusMessage = "Deleted: ${item.name}",
                     keywordSearchResults = _uiState.value.keywordSearchResults.filter { it.item.path != item.path }
                 )
@@ -767,6 +819,77 @@ class FileManagerViewModel(application: Application) : AndroidViewModel(applicat
             } else {
                 _uiState.value = _uiState.value.copy(errorMessage = "Could not delete ${item.name}. May be write-protected.")
             }
+        }
+    }
+
+    // --- Multi-Selection & Batch File Management ---
+    fun toggleFileSelection(item: FileSystemItem) {
+        val current = _uiState.value.selectedFilePaths
+        val updated = if (current.contains(item.path)) {
+            current - item.path
+        } else {
+            current + item.path
+        }
+        _uiState.value = _uiState.value.copy(selectedFilePaths = updated)
+        // Keep instant preview while selecting files:
+        if (!item.isDirectory) {
+            onSelectFileForPreview(item)
+        }
+    }
+
+    fun selectAllFiles(items: List<FileSystemItem>) {
+        val filePaths = items.filter { !it.isDirectory }.map { it.path }.toSet()
+        if (filePaths.isEmpty()) return
+
+        val current = _uiState.value.selectedFilePaths
+        val allSelected = current.containsAll(filePaths)
+        if (allSelected) {
+            _uiState.value = _uiState.value.copy(selectedFilePaths = current - filePaths)
+        } else {
+            _uiState.value = _uiState.value.copy(selectedFilePaths = current + filePaths)
+            val firstFile = items.firstOrNull { !it.isDirectory }
+            if (firstFile != null) {
+                onSelectFileForPreview(firstFile)
+            }
+        }
+    }
+
+    fun clearSelection() {
+        _uiState.value = _uiState.value.copy(selectedFilePaths = emptySet())
+    }
+
+    fun getSelectedFiles(): List<File> {
+        return _uiState.value.selectedFilePaths.map { File(it) }.filter { it.exists() && it.isFile }
+    }
+
+    fun deleteSelectedFiles() {
+        val paths = _uiState.value.selectedFilePaths.toList()
+        if (paths.isEmpty()) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            var count = 0
+            withContext(Dispatchers.IO) {
+                for (p in paths) {
+                    val f = File(p)
+                    if (repository.deleteFileOrFolder(f)) {
+                        count++
+                    }
+                }
+            }
+            if (_uiState.value.selectedItemForPreview?.path in paths) {
+                _uiState.value = _uiState.value.copy(selectedItemForPreview = null)
+                audioManager.stop()
+                appSettings.setLastSelectedFilePath(null)
+            }
+            val remaining = _uiState.value.currentItems.filter { it.path !in paths }
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                currentItems = remaining,
+                selectedFilePaths = emptySet(),
+                statusMessage = "Deleted $count selected file(s)",
+                keywordSearchResults = _uiState.value.keywordSearchResults.filter { it.item.path !in paths }
+            )
+            refreshCurrentDirectory()
         }
     }
 

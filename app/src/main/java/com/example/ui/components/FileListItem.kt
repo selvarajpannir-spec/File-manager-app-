@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -37,6 +38,8 @@ import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -75,6 +78,8 @@ fun FileListItem(
     onRename: () -> Unit,
     onShowDetails: () -> Unit,
     onDelete: () -> Unit,
+    isChecked: Boolean = false,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val category = item.category
@@ -98,15 +103,18 @@ fun FileListItem(
             .clickable { onClick() }
             .testTag("file_item_${item.name}"),
         shape = RoundedCornerShape(12.dp),
+        border = if (isChecked) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelectedForPreview) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            containerColor = if (isChecked) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            } else if (isSelectedForPreview) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
             } else {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
             }
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelectedForPreview) 2.dp else 0.dp
+            defaultElevation = if (isChecked || isSelectedForPreview) 2.dp else 0.dp
         )
     ) {
         Column(
@@ -120,6 +128,21 @@ fun FileListItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                if (onCheckedChange != null) {
+                    Checkbox(
+                        checked = isChecked,
+                        onCheckedChange = onCheckedChange,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("checkbox_${item.name}"),
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = MaterialTheme.colorScheme.primary,
+                            checkmarkColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+
                 // Category / Type Icon Box
                 Box(
                     modifier = Modifier

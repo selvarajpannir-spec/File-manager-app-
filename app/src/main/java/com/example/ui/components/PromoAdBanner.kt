@@ -154,6 +154,7 @@ fun PromoAdBanner(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .height(78.dp)
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .testTag("admob_promo_banner_surface"),
         shape = RoundedCornerShape(10.dp),

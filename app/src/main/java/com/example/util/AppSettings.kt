@@ -63,9 +63,42 @@ class AppSettings(context: Context) {
         prefs.edit().putString(KEY_FONT_SCALE, scale.name).apply()
     }
 
+    fun setLastOpenedPath(path: String) {
+        if (path.isNotBlank()) {
+            prefs.edit().putString(KEY_LAST_OPENED_PATH, path).apply()
+        }
+    }
+
+    fun getLastOpenedPath(): String? {
+        return prefs.getString(KEY_LAST_OPENED_PATH, null)
+    }
+
+    fun setLastSelectedFilePath(path: String?) {
+        if (path.isNullOrBlank()) {
+            prefs.edit().remove(KEY_LAST_SELECTED_FILE_PATH).apply()
+        } else {
+            prefs.edit().putString(KEY_LAST_SELECTED_FILE_PATH, path).apply()
+        }
+    }
+
+    fun getLastSelectedFilePath(): String? {
+        return prefs.getString(KEY_LAST_SELECTED_FILE_PATH, null)
+    }
+
+    fun setLastActiveTab(tabName: String) {
+        prefs.edit().putString(KEY_LAST_ACTIVE_TAB, tabName).apply()
+    }
+
+    fun getLastActiveTab(): String? {
+        return prefs.getString(KEY_LAST_ACTIVE_TAB, null)
+    }
+
     companion object {
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_FONT_SCALE = "key_font_scale"
+        private const val KEY_LAST_OPENED_PATH = "key_last_opened_path"
+        private const val KEY_LAST_SELECTED_FILE_PATH = "key_last_selected_file_path"
+        private const val KEY_LAST_ACTIVE_TAB = "key_last_active_tab"
 
         @Volatile
         private var INSTANCE: AppSettings? = null

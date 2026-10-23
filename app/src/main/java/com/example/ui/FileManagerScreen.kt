@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import com.example.ui.components.PromoAdBanner
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -72,16 +73,21 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -204,7 +210,7 @@ fun FileManagerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 840.dp)
-                        .height(76.dp)
+                        .height(78.dp)
                         .align(Alignment.CenterHorizontally)
                         .testTag("top_promo_ad_banner_container")
                 ) {
@@ -1164,6 +1170,8 @@ private fun FileListContent(
             }
         }
 
+        var showBatchDeleteConfirmDialog by remember { mutableStateOf(false) }
+
         Column(modifier = Modifier.fillMaxSize()) {
             // Dedicated Document Type Filter Ribbon
             if (uiState.activeDocumentTypeFilter != null) {
@@ -1325,36 +1333,167 @@ private fun FileListContent(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("file_list_lazy_column"),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    items(
-                        count = displayItems.size,
-                        key = { idx -> "${displayItems[idx].path}_$idx" }
-                    ) { idx ->
-                        val item = displayItems[idx]
-                        FileListItem(
-                            item = item,
-                            isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
-                            onClick = {
-                                if (item.isDirectory) {
-                                    viewModel.loadDirectory(item.path)
-                                } else {
-                                    viewModel.onSelectFileForPreview(item)
+                val fileOnlyItems = remember(displayItems) { displayItems.filter { !it.isDirectory } }
+                val selectedCount = uiState.selectedFilePaths.size
+                val areAllFilesSelected = fileOnlyItems.isNotEmpty() && fileOnlyItems.all { uiState.selectedFilePaths.contains(it.path) }
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Multi-Select Header Toolbar
+                    if (fileOnlyItems.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                // Select All Checkbox & Label
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .clickable { viewModel.selectAllFiles(fileOnlyItems) }
+                                        .padding(end = 4.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = areAllFilesSelected,
+                                        onCheckedChange = { viewModel.selectAllFiles(fileOnlyItems) },
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .testTag("select_all_checkbox"),
+                                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (areAllFilesSelected) "Deselect All" else "Select All (${fileOnlyItems.size})",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
-                            },
-                            onAddTagClick = { viewModel.openTagSheet(item) },
-                            onOpenWithSystem = { openFileInExternalApp(context, item.file) },
-                            onShare = { shareFile(context, item.file) },
-                            onRename = { viewModel.openRenameDialog(item) },
-                            onShowDetails = { viewModel.openDetailsDialog(item) },
-                            onDelete = { viewModel.deleteItem(item) }
-                        )
+
+                                // Batch Actions: Share, Delete, Clear
+                                if (selectedCount > 0) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "$selectedCount selected",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        // Share Selected Button
+                                        FilledTonalButton(
+                                            onClick = {
+                                                val selectedFiles = viewModel.getSelectedFiles()
+                                                shareMultipleFiles(context, selectedFiles)
+                                            },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                            modifier = Modifier
+                                                .height(30.dp)
+                                                .testTag("share_selected_button")
+                                        ) {
+                                            Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(13.dp))
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text("Share", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        // Delete Selected Button
+                                        FilledTonalButton(
+                                            onClick = { showBatchDeleteConfirmDialog = true },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                            modifier = Modifier
+                                                .height(30.dp)
+                                                .testTag("delete_selected_button"),
+                                            colors = ButtonDefaults.filledTonalButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(13.dp))
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            Text("Delete", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        IconButton(
+                                            onClick = { viewModel.clearSelection() },
+                                            modifier = Modifier.size(26.dp).testTag("clear_selection_button")
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(15.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("file_list_lazy_column"),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        items(
+                            count = displayItems.size,
+                            key = { idx -> "${displayItems[idx].path}_$idx" }
+                        ) { idx ->
+                            val item = displayItems[idx]
+                            FileListItem(
+                                item = item,
+                                isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
+                                isChecked = uiState.selectedFilePaths.contains(item.path),
+                                onCheckedChange = if (!item.isDirectory) { { _ -> viewModel.toggleFileSelection(item) } } else null,
+                                onClick = {
+                                    if (item.isDirectory) {
+                                        viewModel.loadDirectory(item.path)
+                                    } else {
+                                        viewModel.onSelectFileForPreview(item)
+                                    }
+                                },
+                                onAddTagClick = { viewModel.openTagSheet(item) },
+                                onOpenWithSystem = { openFileInExternalApp(context, item.file) },
+                                onShare = { shareFile(context, item.file) },
+                                onRename = { viewModel.openRenameDialog(item) },
+                                onShowDetails = { viewModel.openDetailsDialog(item) },
+                                onDelete = { viewModel.deleteItem(item) }
+                            )
+                        }
+                    }
+                }
+
+                if (showBatchDeleteConfirmDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showBatchDeleteConfirmDialog = false },
+                        icon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                        title = { Text("Delete Selected Files") },
+                        text = { Text("Are you sure you want to permanently delete $selectedCount selected file(s)?") },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showBatchDeleteConfirmDialog = false
+                                    viewModel.deleteSelectedFiles()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("Delete")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showBatchDeleteConfirmDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -1585,6 +1724,8 @@ private fun TaggedItemsList(
                 FileListItem(
                     item = item,
                     isSelectedForPreview = uiState.selectedItemForPreview?.path == item.path,
+                    isChecked = uiState.selectedFilePaths.contains(item.path),
+                    onCheckedChange = if (!item.isDirectory) { { _ -> viewModel.toggleFileSelection(item) } } else null,
                     onClick = {
                         if (item.file.exists() && item.file.isDirectory) {
                             viewModel.setActiveTab(FileExplorerTab.BROWSER)
@@ -1856,6 +1997,35 @@ fun shareFile(context: Context, file: File) {
         context.startActivity(Intent.createChooser(intent, "Share file"))
     } catch (e: Exception) {
         Toast.makeText(context, "Cannot share file: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun shareMultipleFiles(context: Context, files: List<File>) {
+    val validFiles = files.filter { it.exists() && it.isFile }
+    if (validFiles.isEmpty()) {
+        Toast.makeText(context, "No files selected to share", Toast.LENGTH_SHORT).show()
+        return
+    }
+    if (validFiles.size == 1) {
+        shareFile(context, validFiles.first())
+        return
+    }
+    try {
+        val uris = ArrayList(validFiles.map { file ->
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+        })
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "*/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(Intent.createChooser(intent, "Share ${validFiles.size} files"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Cannot share files: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 

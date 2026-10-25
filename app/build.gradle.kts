@@ -17,7 +17,7 @@ android {
     applicationId = "com.filesplus.filemanager.app"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
+    versionCode = 4
     versionName = "3.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -67,6 +67,12 @@ android {
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
+  }
+  packaging {
+    jniLibs {
+      useLegacyPackaging = false
+      excludes += listOf("**/libandroidx.graphics.path.so")
+    }
   }
 }
 

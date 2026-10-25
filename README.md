@@ -4,102 +4,162 @@
 [![Android](https://img.shields.io/badge/Platform-Android_8.0+-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin_1.9+-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack_Compose_Material_3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Version](https://img.shields.io/badge/Version-v3.0_(Build_3)-3B82F6?style=for-the-badge&logo=googleplay&logoColor=white)](#whats-new-in-v30)
 [![Privacy First](https://img.shields.io/badge/Privacy-100%25_Offline-00C853?style=for-the-badge&logo=shield&logoColor=white)](#privacy-first-and-security)
 
 ---
 
-## 💡 Why Files+ Reinvents the Way You Manage Files
-
-Traditional file managers treat your device like a dusty storage locker: a labyrinth of nested folders, cryptic filenames, and rigid directories where finding a single document feels like searching for a needle in a haystack. 
-
-**Files+ is built for how we actually use our devices today.** 
-
-Instead of opening five different apps just to check a receipt, verify an invoice, or play an audio clip, **Files+** gives you an instant, fluid workspace. Whether you're searching inside 300-page PDF backups for a phone number, organizing thousands of messy downloads in one tap, or grouping project assets across different folders with color-coded tags, **Files+ saves you minutes on every single interaction.**
+## 🌟 Interactive Demonstration Page
+> 🌐 **Experience the live interactive demo page right now:**  
+> Open [`app_guide.html`](./app_guide.html) (or [`demo.html`](./demo.html)) in any web browser to test the interactive phone mockup, live preview tab switcher, checkbox multi-selection, and batch sharing simulation!  
+> You can also launch this guide directly inside the Android app from the **⋮ (3-Dot Menu) ➔ 📖 How It Works / App Guide**.
 
 ---
 
-## ⚡ How Files+ Saves You Time Every Day
+## 📱 App Layout & Interface Architecture
 
-| Everyday Task | Classic File Managers | **With Files+** |
-| :--- | :--- | :--- |
-| **Check a PDF or Document** | Click file ➔ choose external app ➔ wait for heavy viewer to load ➔ exit back. | 👁️ **Instant Top Preview**: See page 1 of PDFs, photos, videos, and code right in your feed. |
-| **Find Text or Phone Number in Documents** | Impossible without manually opening and skimming every file one by one. | 🔍 **Deep Multi-Format Search**: Searches *inside* PDFs, DOCX, XLSX, TXT, VCF, and Code files simultaneously. |
-| **Messy Download & DCIM Folders** | Spend 30 minutes manually creating folders and dragging files. | ✨ **1-Tap Auto-Organize**: Scans hundreds of files and sorts them into neat, categorized folders in seconds. |
-| **Organize Projects Across Storage** | Forced to duplicate files into rigid single-folder structures. | 🏷️ **Color-Coded Cross-Folder Tags**: Group files with `#Work`, `#Tax2024`, or `#Urgent` anywhere on your device. |
-| **Listen to Voice Notes / Audio** | Launches an external media player that takes over your screen. | 🎵 **Inline Mini-Player**: Play, scrub, and pause audio clips right from the preview header. |
-| **Inspect Code or Binary Logs** | Requires a dedicated text editor or desktop hex tool. | 💻 **Built-in Syntax & Hex Inspector**: View formatted code and 16-byte hex dumps with zero lag. |
+Files+ organizes your screen with an ergonomic, zero-friction layout built for modern handheld Android devices:
 
----
-
-## 🚀 Key Features You'll Love
-
-### 1. 👁️ Instant Multi-Format File Preview (Zero App Switching)
-No more waiting for third-party viewers to load. Tapping any file immediately activates the interactive **Top Preview Card**:
-* 📄 **PDFs**: Ultra-crisp vector page rendering powered by native Android `PdfRenderer`.
-* 🖼️ **Photos & Graphics**: High-definition image previews with zoom and metadata inspect.
-* 🎵 **Audio & Voice Memos**: Inline playback with live scrubber, duration stamps, and waveform control.
-* 🎬 **Video Files**: Seamless video frame extraction and instant player integration.
-* 💻 **Code & Text**: Monospaced syntax display with line numbers for Python, Kotlin, JS, JSON, XML, Markdown, and shell scripts.
-* 🔬 **Binary & System Inspector**: Formatted 16-byte Hex Dump viewer (`Offset | Hex Bytes | ASCII`) for logs and raw binaries.
-
----
-
-### 2. 🔍 Deep Keyword & Content Search Engine
-Traditional search only looks at filenames. **Files+ reads what's inside.**
-* 📚 **Searches Inside Heavy Files**: Scans text inside **PDFs** (up to 400 pages per file), **Word** (`.docx`), **Excel** (`.xlsx`), **PowerPoint** (`.pptx`), and **vCard** contacts (`.vcf`).
-* 📞 **Smart Phone Number & Entity Matching**: Searches flexible numeric patterns (e.g. searching `9876543210` matches `(987) 654-3210`, `+91-98765-43210`, and `987 654 3210`).
-* ⚡ **Multi-Keyword Logic**: Filter with comma-separated terms (`invoice, 2024, paid`) using **Match ANY** or **Match ALL** modes.
-* 🔔 **Background Scanning with Notification**: Run intensive scans in the background while continuing your work. Receive a rich Android notification when ready, with one-tap jump directly to the matched results.
+```
+┌──────────────────────────────────────────────────────────┐
+│ [AD] Files+ Pro Suite • 80 dp Promotional Banner         │
+├──────────────────────────────────────────────────────────┤
+│ 📁  /Documents/Invoices/          [🔍] [🏷️] [🔃] [⋮ Menu] │  <-- Single Unified Navigation Bar
+├──────────────────────────────────────────────────────────┤
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ 📄 Invoice_Oct2026.pdf               [Instant Preview]│ │  <-- Top Instant Preview Card
+│ │ INVOICE #INV-2026-904 • Acme Global                  │ │      (PDF, Photo, Audio player,
+│ │ Customer Phone: +1 (555) 987-6543 • Status: PAID     │ │       Code syntax, Tables, Hex dump)
+│ └──────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────┤
+│ [☑️] Select All (3 files)     [📤 Share] [🗑️ Delete] [✕] │  <-- Multi-Select Batch Action Toolbar
+├──────────────────────────────────────────────────────────┤
+│ [☑] 📄  Invoice_Oct2026.pdf       142 KB  • #Finance     │
+│ [☑] 📝  Project_Brief.docx         48 KB  • #Work        │  <-- File List with Checkboxes
+│ [ ] 🖼️  Site_Inspection.jpg       2.4 MB  • #Photos      │      (Instant preview active while checking!)
+│ [ ] 🎵  Meeting_Memo.m4a          3.8 MB                 │
+│ [ ] 💻  Server_Script.py           12 KB  • #Code        │
+├──────────────────────────────────────────────────────────┤
+│ [📁 Explorer]    [🔍 Search]    [🏷️ Tags]    [📊 Storage] │  <-- Bottom Navigation Bar
+└──────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### 3. ✨ 1-Tap Smart Auto-Organizer
-Turn messy `Downloads`, `DCIM`, or `WhatsApp` directories into clean, structured libraries in seconds:
-* 🗂️ **Automated Category Routing**:
-  * 🖼️ **Images**: `.jpg`, `.png`, `.gif`, `.webp`, `.heic`, `.svg` ➔ `/AutoOrganized/Images/`
-  * 📄 **Documents**: `.pdf`, `.docx`, `.doc`, `.txt`, `.md`, `.odt` ➔ `/AutoOrganized/Documents/`
-  * 🎬 **Videos**: `.mp4`, `.mkv`, `.mov`, `.avi`, `.webm` ➔ `/AutoOrganized/Videos/`
-  * 📊 **Sheets**: `.xlsx`, `.xls`, `.csv`, `.numbers` ➔ `/AutoOrganized/Sheets/`
-  * 💻 **Code**: `.kt`, `.py`, `.js`, `.json`, `.html`, `.cpp`, `.sql` ➔ `/AutoOrganized/Code/`
-  * 📦 **Archives & Apps**: `.zip`, `.rar`, `.7z`, `.tar`, `.apk` ➔ `/AutoOrganized/Archives/` & `/Apps/`
-* 🛡️ **Fail-Safe Protection**: Automatically preserves system directories (`/system`, `/proc`, `/sys`) and app data (`/Android/data`).
-* 🔁 **Collision-Proof**: Safely renames duplicates (`document_1.pdf`) and updates all SQLite database tag associations automatically.
+## 📖 How to Use Files+ (Step-by-Step Walkthrough)
+
+### 1. 👁️ Instant Top File Preview (Zero App Switching)
+* **How it works:** Whenever you tap or check any file in your storage list, the **Top Preview Card** instantly extracts and renders its contents right on your screen without leaving the app.
+* **Supported Formats:**
+  * **📄 PDF Documents:** Instant page-1 vector rendering using native Android `PdfRenderer`.
+  * **🖼️ Images & Graphics:** High-definition thumbnails with dimensions, resolution, and EXIF metadata.
+  * **🎵 Audio & Voice Memos:** Built-in mini-player with interactive play/pause, scrubbable progress bar, and elapsed time counter.
+  * **🎬 Video Files:** Instant video thumbnail generation with duration and container specs.
+  * **💻 Code & Plain Text:** Monospaced syntax display with line numbers for Python, Kotlin, JavaScript, JSON, XML, HTML, Shell, and Markdown.
+  * **📊 CSV & Excel Spreadsheets:** Formatted table viewer displaying rows, columns, and numeric cells.
+  * **🔬 Binary & Firmware Logs:** 16-byte formatted Hex Dump viewer (`Offset | Hex Bytes | ASCII`).
+* **Tip:** Tap the eye icon or preview banner to open the full-screen interactive reader with text search, copy-to-clipboard, and zoom controls.
 
 ---
 
-### 4. 🏷️ Color-Coded Tagging & Quick Bookmarks
-Break free from rigid folder trees:
-* **Custom Tags**: Assign vibrant labels like `#Personal`, `#Work`, `#Receipts`, `#Important`, or `#Code`.
-* **Universal Filtering**: Filter your whole device by tag with a single tap, regardless of which folder or subfolder the file lives in.
-* **SQLite Persistence**: Backed by a local Room database with lightning-fast query indexing.
+### 2. ☑️ Multi-File Checkbox Selection & Batch Sharing
+* **How it works:** Every file row includes an accessible Material 3 **Checkbox**.
+* **Select One or All:**
+  * Tap an individual checkbox to toggle selection on that file.
+  * Tap the **Select All** header checkbox to instantly select all files in the current folder.
+* **Continuous Instant Preview:**
+  * Checking a file's checkbox automatically updates the top preview card to that file, so you can review content before sharing or deleting.
+* **Batch Native Sharing:**
+  * When one or more files are selected, tap **📤 Share** on the batch toolbar.
+  * Files+ bundles all selected items and invokes Android's native `Intent.ACTION_SEND_MULTIPLE` via secure `FileProvider` URIs.
+  * Share multiple documents, photos, or audio clips simultaneously to WhatsApp, Gmail, Google Drive, Telegram, Slack, or Bluetooth.
+* **Batch Safe Deletion:**
+  * Tap **🗑️ Delete** to delete all selected files at once with a safe confirmation prompt.
 
 ---
 
-### 5. 🎨 Ergonomic Material 3 Design & Fluid Controls
-* 🌗 **Smart Light / Dark Modes**: Seamless palette transition with deep OLED slate background (`#0F172A`) for battery savings.
-* 🔤 **Dynamic Display & Font Scaling**: Choose from 5 typography scales (85% to 150%) that reflow text without clipping.
-* 📱 **Adaptive Form Factor Support**: Optimized for compact phones, flip covers, large flagships, foldables, tablets, and Chromebooks.
-* ⚡ **Instant Cold-Start Launch**: Dedicated lightweight `SplashActivity` with native window background styling ensures **zero black-screen delays** on startup.
+### 3. 💾 Session State Memory & Zero Root Reset
+* **Exit & Reopen Memory:**
+  * When you exit or close Files+, the app automatically saves your:
+    1. Active folder directory path (e.g. `/storage/emulated/0/Download/Work`)
+    2. Active tab (File Explorer, Deep Search, Tags, or Storage)
+    3. Last previewed file item
+  * When you relaunch Files+, it opens **immediately to the exact screen, folder, and file preview** where you left off.
+* **Safe Deletion Navigation (No Root Reset):**
+  * In classic file managers, deleting a file often resets the screen back to the Linux root (`/`) or empty home screen.
+  * In **Files+**, deleting a file (single or batch) updates the current list in-place and safely refreshes while strictly keeping you on the **exact same page/folder**.
+* **Storage Boundary Guard:**
+  * Navigating up with the parent folder button (`nav_up_button`) stops safely at primary user storage (`/storage/emulated/0`), eliminating "empty folder" confusion caused by navigating into restricted Linux root partitions.
+
+---
+
+### 4. 🔍 Deep Inside-Document Search Engine
+Standard file managers only match file names. **Files+ reads the text inside your files.**
+
+* **Supported Document Types:** Scans text content inside **PDFs** (up to 400 pages), **Word documents** (`.docx`), **Excel spreadsheets** (`.xlsx`), **PowerPoint presentations** (`.pptx`), **CSV tables**, **vCard contacts** (`.vcf`), and code files.
+* **📞 Smart Phone Number & Entity Matching:**
+  * Matches normalized numbers regardless of spacing, dashes, or country codes.
+  * Searching `9876543210` automatically matches `+91-98765-43210`, `(987) 654-3210`, and `987 654 3210`.
+* **⚡ Multi-Keyword Logic:**
+  * Enter comma-separated search terms (e.g. `invoice, tax, 2026`).
+  * Choose **Match ANY** (finds files containing any term) or **Match ALL** (finds files containing all terms).
+* **🔔 Non-Blocking Background Scanning & Synced Notifications:**
+  * Deep scans run asynchronously in a foreground service so the app never hangs.
+  * A system notification displays live progress and seamlessly synchronizes into a "Scan Completed" notification with a 1-tap jump to search results.
+
+---
+
+### 5. ✨ 1-Tap Smart Auto-Organizer
+Turn cluttered `Downloads`, `DCIM`, or `WhatsApp` folders into organized libraries with a single tap:
+
+1. Tap **⋮ (3-Dot Menu) ➔ ✨ Auto Organize Files**.
+2. Select which categories to sort:
+   * 🖼️ **Images**: `.jpg`, `.png`, `.gif`, `.webp`, `.heic`, `.svg` ➔ `/AutoOrganized/Images/`
+   * 📄 **Documents**: `.pdf`, `.docx`, `.doc`, `.txt`, `.md`, `.odt` ➔ `/AutoOrganized/Documents/`
+   * 🎬 **Videos**: `.mp4`, `.mkv`, `.mov`, `.avi`, `.webm` ➔ `/AutoOrganized/Videos/`
+   * 🎵 **Audio**: `.mp3`, `.m4a`, `.wav`, `.flac`, `.ogg` ➔ `/AutoOrganized/Audio/`
+   * 📊 **Sheets**: `.xlsx`, `.xls`, `.csv`, `.numbers` ➔ `/AutoOrganized/Sheets/`
+   * 💻 **Code**: `.kt`, `.py`, `.js`, `.json`, `.html`, `.cpp`, `.sql` ➔ `/AutoOrganized/Code/`
+   * 📦 **Archives & Apps**: `.zip`, `.rar`, `.7z`, `.tar`, `.apk` ➔ `/AutoOrganized/Archives/` & `/Apps/`
+3. Tap **Organize Now**. Files are safely moved with automatic collision avoidance (renaming duplicates like `invoice_1.pdf`) while preserving all tag associations.
+
+---
+
+### 6. 🏷️ Color-Coded Cross-Folder Tagging
+* Assign custom tags (e.g. `#Taxes2026`, `#Receipts`, `#ClientA`, `#Urgent`) to any file or folder.
+* Switch to the **🏷️ Tagged Files** tab to view and filter all tagged documents across your entire device in one unified view, regardless of which nested directory they reside in.
+* Tag data is stored locally in a high-speed SQLite database powered by Room.
+
+---
+
+### 7. 📖 3-Dot Overflow Menu Drawer
+Tap the **⋮** button on the top navigation bar to open the quick-access drawer:
+* **📁 File Explorer:** Jump back to directory browsing.
+* **🔍 Deep Keyword Search:** Access full-text in-document search.
+* **🏷️ Tagged Files:** Open your tagged collection.
+* **📊 Storage Partitions Stats:** Check disk space breakdown (Total, Used, Free).
+* **✨ Auto Organize Files:** Launch 1-tap sorting.
+* **➕ New Folder / New Text File:** Create new storage items.
+* **📥 Import via SAF:** Import files via the Android Storage Access Framework.
+* **🌙 Dark / Light Theme:** Toggle between OLED slate dark mode (`#0F172A`) and daylight mode.
+* **🔤 Font Size:** Reflow text size dynamically (85% to 150%).
+* **📖 How It Works / App Guide:** Open the built-in interactive demonstration guide and launch the bundled HTML showcase page!
 
 ---
 
 ## 🔒 Privacy First & 100% Offline
 
-Your files are your private business.
-* 🚫 **Zero Cloud Tracking**: All search indexing, PDF text extraction, and categorization happens **strictly on your device's CPU**.
-* 🌐 **No Unnecessary Telemetry**: Your files, filenames, tags, and search keywords are never uploaded to any remote server.
-* 🔐 **Full Scoped Storage Compliance**: Built for modern Android 11+ (API 30–34) with transparent all-files access permissions.
+* **🚫 Zero Cloud Tracking:** All search indexing, PDF text extraction, and categorization happens **strictly on your device's CPU**.
+* **🌐 No Unnecessary Telemetry:** Your files, filenames, tags, and search keywords are never uploaded to any remote server.
+* **🔐 Full Scoped Storage Compliance:** Built for modern Android (API 24 to 36) with transparent all-files access permissions.
 
 ---
 
 ## 🏗️ Architecture & Technology Stack
 
-Built following modern Android architecture guidelines:
-
 ```
 com.example
-├── SplashActivity.kt             # Lightweight, zero-lag launch entry point
-├── MainActivity.kt               # Jetpack Compose UI container & navigation
+├── MainActivity.kt               # Jetpack Compose UI container & lifecycle routing
 ├── data
 │   ├── local                     # Room Database, DAOs, Entities, FTS4 Full-Text Search
 │   │   ├── AppDatabase.kt
@@ -108,38 +168,32 @@ com.example
 │   ├── model/ (FileSystemItem)
 │   └── repository/ (FileManagerRepository)
 ├── ui
-│   ├── FileManagerScreen.kt      # Main responsive workspace & List-Detail pane
-│   ├── FileManagerViewModel.kt   # UI state machine, deep search & organizer engine
+│   ├── FileManagerScreen.kt      # Main responsive workspace & unified navigation
+│   ├── FileManagerViewModel.kt   # UI state machine, multi-selection & persistence engine
 │   ├── components/
+│   │   ├── AppGuideDialog.kt     # In-app interactive guide & HTML demo launcher
 │   │   ├── TopPreviewCard.kt     # Multi-format live preview (PDF, Media, Hex, Code)
-│   │   ├── AutoOrganizeDialog.kt # Interactive categorization checklist & progress
-│   │   ├── KeywordSearchTab.kt   # Background full-text search interface
+│   │   ├── FileListItem.kt       # List row with Checkbox, tags, and category styling
+│   │   ├── AutoOrganizeDialog.kt # 1-tap categorization checklist & progress
+│   │   ├── KeywordSearchTab.kt   # Deep in-file content search engine
 │   │   ├── TagSelectionSheet.kt  # Material 3 tag manager
-│   │   └── PromoAdBanner.kt      # Tight-fit non-intrusive promotion banner
+│   │   └── PromoAdBanner.kt      # 80.dp fitted promotional ad banner
 │   └── theme/                    # Dynamic Material 3 colors, typography, shapes
 └── util
     ├── StorageSearchScanner.kt   # Apache PDFBox & multi-format text extractor
     ├── AutoOrganizeManager.kt    # Extension categorization engine & safe mover
     ├── NotificationHelper.kt     # System notifications on scan completion
     ├── FileUtil.kt               # Category detection, Hex dump, PdfRenderer
-    └── AppSettings.kt            # Datastore-backed theme & font scale preferences
+    └── AppSettings.kt            # Datastore & SharedPreferences session state memory
 ```
-
-* **Framework**: [Jetpack Compose (Material 3)](https://developer.android.com/jetpack/compose)
-* **Language**: [Kotlin 1.9+](https://kotlinlang.org/)
-* **Database**: [Room SQLite with FTS4 Full-Text Search](https://developer.android.com/training/data-storage/room)
-* **Document Engine**: [Apache PDFBox for Android](https://github.com/TomRoush/PdfBox-Android)
-* **Image Loading**: [Coil Compose](https://coil-kt.github.io/coil/compose/)
-* **Concurrency**: Kotlin Coroutines & `StateFlow`
 
 ---
 
 ## 🚀 Getting Started
 
 ### Minimum Requirements
-* **OS**: Android 8.0 (API Level 26) or higher
-* **Target SDK**: Android 14+ (API Level 34)
-* **Storage Access**: "All Files Access" (`MANAGE_EXTERNAL_STORAGE`) for full device management.
+* **OS**: Android 8.0 (API Level 26) or higher (Target SDK: Android 14/15, API 36)
+* **Storage Access**: All Files Access (`MANAGE_EXTERNAL_STORAGE`)
 
 ### Build & Run
 ```bash
@@ -152,15 +206,15 @@ cd FilesPlus
 # Build the debug APK
 gradle assembleDebug
 
-# Run unit and instrumented tests
-gradle testDebugUnitTest
+# Run unit tests
+gradle :app:testDebugUnitTest
 ```
 
 ---
 
-## 🌟 Why You'll Never Go Back to Classic File Managers
-
-Files+ transforms file browsing from a tedious chore into a fast, intelligent, and enjoyable experience. Whether you're organizing gigabytes of media, quickly inspecting code on the go, or searching for an invoice buried deep in your storage, **Files+ gives you the control, speed, and intelligence you deserve.**
+## 📄 Documentation Assets
+* **[`app_guide.html`](./app_guide.html)**: Interactive standalone HTML showcase with live demo phone layout.
+* **[`demo.html`](./demo.html)**: Quick redirect alias to `app_guide.html`.
 
 ---
-*Crafted with ❤️ for modern Android devices.*
+*Crafted with ❤️ for modern Android devices • Version 3.0 (Build 3)*

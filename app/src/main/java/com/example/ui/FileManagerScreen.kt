@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -124,6 +125,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.FileSystemItem
+import com.example.ui.components.AppGuideDialog
 import com.example.ui.components.AutoOrganizeDialog
 import com.example.ui.components.CreateFileDialog
 import com.example.ui.components.CreateFolderDialog
@@ -165,6 +167,7 @@ fun FileManagerScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showToolsMenu by remember { mutableStateOf(false) }
+    var showAppGuideDialog by remember { mutableStateOf(false) }
     var isSearchFileNameOpen by remember { mutableStateOf(false) }
 
     // Check permissions on resume
@@ -210,7 +213,7 @@ fun FileManagerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .widthIn(max = 840.dp)
-                        .height(78.dp)
+                        .height(80.dp)
                         .align(Alignment.CenterHorizontally)
                         .testTag("top_promo_ad_banner_container")
                 ) {
@@ -720,6 +723,32 @@ fun FileManagerScreen(
                                         viewModel.refreshCurrentDirectory()
                                     }
                                 )
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = "How It Works & Demo",
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        showToolsMenu = false
+                                        showAppGuideDialog = true
+                                    },
+                                    modifier = Modifier.testTag("nav_menu_app_guide_btn")
+                                )
                             }
                         }
                     }
@@ -909,6 +938,13 @@ fun FileManagerScreen(
                 viewModel.setFontScale(scale)
             },
             onDismiss = { viewModel.closeFontSizeDialog() }
+        )
+    }
+
+    // App Guide & Interactive Demo Dialog
+    if (showAppGuideDialog) {
+        AppGuideDialog(
+            onDismiss = { showAppGuideDialog = false }
         )
     }
 

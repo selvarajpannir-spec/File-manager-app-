@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Files+ | How It Works & Interactive Demonstration Guide</title>
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --surface-card: #131d31;
+      --surface-hover: #1c2942;
+      --border-color: #243553;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: #60a5fa;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.6;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px 80px 20px;
+    }
+
+    /* Hero Header */
+    header.hero {
+      text-align: center;
+      padding: 48px 16px 36px 16px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 40px;
+      background: radial-gradient(circle at top center, rgba(59, 130, 246, 0.15), transparent 70%);
+    }
+
+    .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-primary { background: rgba(59, 130, 246, 0.2); color: var(--primary-light); border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-amber { background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.4); }
+
+    h1.hero-title {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 30%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 auto 24px auto;
+    }
+
+    /* Jump Links */
+    .quick-links {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .quick-link-btn {
+      background: var(--surface-card);
+      color: var(--text-main);
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-link-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Main Showcase Section (Interactive Phone Mockup + Explanations) */
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 900px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Interactive Phone Mockup */
+    .phone-container {
+      position: sticky;
+      top: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .phone-mockup {
+      width: 100%;
+      max-width: 380px;
+      height: 760px;
+      background: #000;
+      border-radius: 42px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 4px #2b384e;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .phone-speaker {
+      width: 80px;
+      height: 5px;
+      background: #2a3342;
+      border-radius: 4px;
+      margin: 4px auto 8px auto;
+    }
+
+    .screen-inner {
+      background: #0b1120;
+      flex: 1;
+      border-radius: 32px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #1e293b;
+      position: relative;
+    }
+
+    /* Mock Ad Banner */
+    .mock-ad-banner {
+      height: 54px;
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border-bottom: 1px solid #4338ca;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 0.72rem;
+    }
+
+    .mock-ad-badge {
+      background: #4f46e5;
+      font-size: 0.6rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Mock Top Nav Bar */
+    .mock-nav-bar {
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .mock-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #93c5fd;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .mock-nav-icons {
+      display: flex;
+      gap: 6px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    /* Mock Instant Preview Card */
+    .mock-preview-card {
+      background: #1e293b;
+      margin: 8px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .mock-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .mock-preview-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mock-preview-body {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.7rem;
+      color: #cbd5e1;
+      min-height: 85px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1px dashed #334155;
+    }
+
+    .preview-selector-tabs {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .preview-tab-btn {
+      flex: 1;
+      padding: 4px 2px;
+      font-size: 0.65rem;
+      background: #334155;
+      color: #e2e8f0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .preview-tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    /* Mock Batch Toolbar */
+    .mock-batch-toolbar {
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      margin: 0 8px 6px 8px;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+    }
+
+    .mock-batch-count {
+      color: #60a5fa;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mock-batch-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mock-batch-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .mock-batch-btn.danger {
+      background: #dc2626;
+    }
+
+    /* Mock File List */
+    .mock-file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mock-file-item {
+      background: #131d31;
+      border: 1px solid #1f2c45;
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mock-file-item.selected {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: #3b82f6;
+    }
+
+    .mock-checkbox {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      background: #0f172a;
+    }
+
+    .mock-checkbox.checked {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .mock-file-icon {
+      font-size: 1rem;
+    }
+
+    .mock-file-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .mock-file-name {
+      font-weight: 600;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mock-file-meta {
+      font-size: 0.62rem;
+      color: #94a3b8;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .mock-tag-chip {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fda4af;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.58rem;
+      font-weight: 600;
+    }
+
+    /* Mock Bottom Navigation */
+    .mock-bottom-nav {
+      background: #0f172a;
+      border-top: 1px solid #1e293b;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 4px;
+    }
+
+    .mock-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.6rem;
+      color: #64748b;
+      cursor: pointer;
+    }
+
+    .mock-nav-item.active {
+      color: #3b82f6;
+      font-weight: 700;
+    }
+
+    .mock-nav-item span {
+      font-size: 0.95rem;
+    }
+
+    /* Feature Cards on Right */
+    .feature-overview {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      transition: border-color 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .feature-icon-wrapper {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .feature-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .feature-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feature-steps li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .step-num {
+      background: var(--surface-hover);
+      color: var(--primary-light);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Deep Dive Sections */
+    .section-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin: 48px 0 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .info-box {
+      background: var(--surface-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .info-box h3 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-box p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .code-pill {
+      background: #0f172a;
+      color: #93c5fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      border: 1px solid #1e293b;
+    }
+
+    /* Comparison Table */
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 16px;
+      background: var(--surface-card);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: #17243c;
+      color: #93c5fd;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero Header -->
+  <header class="hero">
+    <div class="container" style="padding-bottom: 0;">
+      <div class="badge-row">
+        <span class="badge badge-primary">⚡ Files+ v3.0 Release</span>
+        <span class="badge badge-green">🛡️ 100% Offline & Private</span>
+        <span class="badge badge-amber">📱 Material 3 Android Architecture</span>
+      </div>
+      <h1 class="hero-title">How Files+ Works & Interactive Demo</h1>
+      <p class="hero-subtitle">
+        Explore how Files+ streamlines file exploration with instant top previews, multi-file batch selection, 
+        in-document keyword search, and intelligent session persistence.
+      </p>
+
+      <div class="quick-links">
+        <a href="#demo-preview" class="quick-link-btn">📱 Interactive Layout Demo</a>
+        <a href="#multi-selection" class="quick-link-btn">☑️ Multi-File Checkbox & Sharing</a>
+        <a href="#instant-preview" class="quick-link-btn">👁️ Live Instant Preview</a>
+        <a href="#deep-search" class="quick-link-btn">🔍 Deep Search Engine</a>
+        <a href="#auto-organizer" class="quick-link-btn">✨ Auto-Organizer</a>
+        <a href="#session-memory" class="quick-link-btn">💾 State Memory & Safe Navigation</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Interactive Layout Showcase -->
+    <section id="demo-preview">
+      <div class="showcase-grid">
+
+        <!-- Phone Mockup on Left -->
+        <div class="phone-container">
+          <div class="phone-mockup">
+            <div class="phone-speaker"></div>
+            <div class="screen-inner">
+
+              <!-- 1. Promotional Ad Banner (80.dp scaled) -->
+              <div class="mock-ad-banner">
+                <div>
+                  <span class="mock-ad-badge">Ad</span>
+                  <strong>Files+ Pro Suite</strong>
+                  <div style="font-size: 0.62rem; color: #cbd5e1;">Lightning search & clean storage</div>
+                </div>
+                <button style="background: #38bdf8; color: #0f172a; border: none; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.65rem; cursor: pointer;">Install</button>
+              </div>
+
+              <!-- 2. Unified Navigation Bar -->
+              <div class="mock-nav-bar">
+                <div class="mock-breadcrumb">
+                  <span>📁</span>
+                  <span>/</span>
+                  <span>Documents</span>
+                  <span>/</span>
+                  <span style="color: #fff;">Invoices</span>
+                </div>
+                <div class="mock-nav-icons">
+                  <span title="Search">🔍</span>
+                  <span title="Filter">🏷️</span>
+                  <span title="Sort">🔃</span>
+                  <span title="3-Dot Menu" style="color: #60a5fa; font-weight: 900;">⋮</span>
+                </div>
+              </div>
+
+              <!-- 3. Top Instant Preview Card -->
+              <div class="mock-preview-card">
+                <div class="mock-preview-header">
+                  <div class="mock-preview-title" id="preview-title">
+                    <span>📄</span>
+                    <span id="preview-name">Invoice_Oct2026.pdf</span>
+                  </div>
+                  <span style="font-size: 0.6rem; color: #38bdf8; background: #0369a1; padding: 1px 5px; border-radius: 3px;">Instant Preview</span>
+                </div>
+                <div class="mock-preview-body" id="preview-content">
+                  <div style="font-weight: 700; color: #38bdf8;">INVOICE #INV-2026-904</div>
+                  <div>Customer: Acme Global Inc.</div>
+                  <div>Phone: +1 (555) 987-6543</div>
+                  <div style="color: #34d399; font-weight: 600;">Status: PAID ($1,450.00)</div>
+                </div>
+                <div class="preview-selector-tabs">
+                  <button class="preview-tab-btn active" onclick="switchPreview('pdf')">PDF</button>
+                  <button class="preview-tab-btn" onclick="switchPreview('image')">Photo</button>
+                  <button class="preview-tab-btn" onclick="switchPreview('audio')">Audio</button>
+                  <button class="preview-tab-btn" onclick="switchPreview('code')">Code</button>
+                  <button class="preview-tab-btn" onclick="switchPreview('hex')">Hex</button>
+                </div>
+              </div>
+
+              <!-- 4. Batch Action Header Toolbar -->
+              <div class="mock-batch-toolbar">
+                <div class="mock-batch-count">
+                  <span>☑️</span>
+                  <span id="mock-selected-count">2 Files Selected</span>
+                </div>
+                <div class="mock-batch-actions">
+                  <button class="mock-batch-btn" onclick="alert('Batch Share: Invoking native Android Intent.ACTION_SEND_MULTIPLE with all checked files!')">📤 Share</button>
+                  <button class="mock-batch-btn danger" onclick="alert('Safe Deletion: Deletes selected files and retains current folder view without resetting to root!')">🗑️ Delete</button>
+                  <button class="mock-batch-btn" style="background:#475569;" onclick="clearMockSelection()">✕ Clear</button>
+                </div>
+              </div>
+
+              <!-- 5. Interactive File List -->
+              <div class="mock-file-list" id="mock-file-list">
+                <!-- Item 1 (Selected) -->
+                <div class="mock-file-item selected" onclick="toggleMockItem(this, 'Invoice_Oct2026.pdf', 'pdf')">
+                  <div class="mock-checkbox checked">✓</div>
+                  <div class="mock-file-icon">📄</div>
+                  <div class="mock-file-info">
+                    <div class="mock-file-name">Invoice_Oct2026.pdf</div>
+                    <div class="mock-file-meta">
+                      <span>142 KB</span> • <span>Oct 24</span>
+                      <span class="mock-tag-chip">#Finance</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 2 (Selected) -->
+                <div class="mock-file-item selected" onclick="toggleMockItem(this, 'Project_Brief.docx', 'code')">
+                  <div class="mock-checkbox checked">✓</div>
+                  <div class="mock-file-icon">📝</div>
+                  <div class="mock-file-info">
+                    <div class="mock-file-name">Project_Brief.docx</div>
+                    <div class="mock-file-meta">
+                      <span>48 KB</span> • <span>Oct 22</span>
+                      <span class="mock-tag-chip" style="background:rgba(59,130,246,0.2); color:#93c5fd;">#Work</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 3 (Unchecked) -->
+                <div class="mock-file-item" onclick="toggleMockItem(this, 'Site_Inspection.jpg', 'image')">
+                  <div class="mock-checkbox"></div>
+                  <div class="mock-file-icon">🖼️</div>
+                  <div class="mock-file-info">
+                    <div class="mock-file-name">Site_Inspection.jpg</div>
+                    <div class="mock-file-meta">
+                      <span>2.4 MB</span> • <span>Oct 20</span>
+                      <span class="mock-tag-chip" style="background:rgba(16,185,129,0.2); color:#6ee7b7;">#Photos</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 4 (Unchecked) -->
+                <div class="mock-file-item" onclick="toggleMockItem(this, 'Meeting_Memo.m4a', 'audio')">
+                  <div class="mock-checkbox"></div>
+                  <div class="mock-file-icon">🎵</div>
+                  <div class="mock-file-info">
+                    <div class="mock-file-name">Meeting_Memo.m4a</div>
+                    <div class="mock-file-meta">
+                      <span>3.8 MB</span> • <span>Oct 18</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Item 5 (Unchecked) -->
+                <div class="mock-file-item" onclick="toggleMockItem(this, 'Server_Script.py', 'code')">
+                  <div class="mock-checkbox"></div>
+                  <div class="mock-file-icon">💻</div>
+                  <div class="mock-file-info">
+                    <div class="mock-file-name">Server_Script.py</div>
+                    <div class="mock-file-meta">
+                      <span>12 KB</span> • <span>Oct 15</span>
+                      <span class="mock-tag-chip" style="background:rgba(245,158,11,0.2); color:#fde68a;">#Code</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 6. Bottom Navigation Bar -->
+              <div class="mock-bottom-nav">
+                <div class="mock-nav-item active">
+                  <span>📁</span>
+                  <div>Explorer</div>
+                </div>
+                <div class="mock-nav-item">
+                  <span>🔍</span>
+                  <div>Search</div>
+                </div>
+                <div class="mock-nav-item">
+                  <span>🏷️</span>
+                  <div>Tags</div>
+                </div>
+                <div class="mock-nav-item">
+                  <span>📊</span>
+                  <div>Storage</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <p style="margin-top: 12px; font-size: 0.8rem; color: var(--text-dim); text-align: center;">
+            💡 Tap any file item or preview tab above to interact with the demo.
+          </p>
+        </div>
+
+        <!-- Walkthrough Explanations on Right -->
+        <div class="feature-overview">
+
+          <!-- Feature 1: Multi-Select with Checkboxes -->
+          <div class="feature-card" id="multi-selection">
+            <div class="feature-header">
+              <div class="feature-icon-wrapper">☑️</div>
+              <div>
+                <h2 class="feature-title">Multi-File Selection & Batch Sharing</h2>
+                <span class="code-pill">NEW in v3.0</span>
+              </div>
+            </div>
+            <p class="feature-desc">
+              Select one or all files with checkboxes for seamless batch operations. Instant preview continues to reflect whichever file is being checked.
+            </p>
+            <ul class="feature-steps">
+              <li>
+                <span class="step-num">1</span>
+                <div><strong>Individual & Select All:</strong> Tap any checkbox to select a file, or use the header checkbox to select all files in the current folder at once.</div>
+              </li>
+              <li>
+                <span class="step-num">2</span>
+                <div><strong>Continuous Instant Preview:</strong> Checking a box keeps the top preview card active, letting you verify document contents before sharing or deleting.</div>
+              </li>
+              <li>
+                <span class="step-num">3</span>
+                <div><strong>Batch Share Sheet:</strong> Tap <em>Share</em> on the batch toolbar to send multiple selected files to WhatsApp, Gmail, Drive, or Telegram using Android's native <span class="code-pill">Intent.ACTION_SEND_MULTIPLE</span>.</div>
+              </li>
+              <li>
+                <span class="step-num">4</span>
+                <div><strong>Safe Batch Deletion:</strong> Tap <em>Delete</em> with confirmation. Files are purged and the list updates instantly on the same page.</div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Feature 2: Instant Top Preview -->
+          <div class="feature-card" id="instant-preview">
+            <div class="feature-header">
+              <div class="feature-icon-wrapper">👁️</div>
+              <div>
+                <h2 class="feature-title">Live Instant Top Preview</h2>
+                <span class="code-pill">Zero App Switching</span>
+              </div>
+            </div>
+            <p class="feature-desc">
+              No need to launch external viewers just to check a receipt or verify a script. Tap any file to instantly see its contents in the top pane.
+            </p>
+            <ul class="feature-steps">
+              <li>
+                <span class="step-num">PDF</span>
+                <div><strong>Vector Page Rendering:</strong> Crisp, clear rendering of page 1 using native Android <span class="code-pill">PdfRenderer</span>.</div>
+              </li>
+              <li>
+                <span class="step-num">IMG</span>
+                <div><strong>High-Definition Photos:</strong> Instant image thumbnails with dimensions, size, and date stamp.</div>
+              </li>
+              <li>
+                <span class="step-num">AUD</span>
+                <div><strong>Inline Audio Player:</strong> Play voice notes, podcasts, or songs with a scrubbable slider and duration counter.</div>
+              </li>
+              <li>
+                <span class="step-num">HEX</span>
+                <div><strong>Binary Inspector:</strong> Formatted 16-byte hex dump view (<span class="code-pill">Offset | Bytes | ASCII</span>) for logs and unknown files.</div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Feature 3: Session State Memory & Safe Navigation -->
+          <div class="feature-card" id="session-memory">
+            <div class="feature-header">
+              <div class="feature-icon-wrapper">💾</div>
+              <div>
+                <h2 class="feature-title">State Memory & Zero Root Reset</h2>
+                <span class="code-pill">Seamless Continuity</span>
+              </div>
+            </div>
+            <p class="feature-desc">
+              Files+ remembers your exact working location and prevents accidental jumps to the device root.
+            </p>
+            <ul class="feature-steps">
+              <li>
+                <span class="step-num">A</span>
+                <div><strong>Folder & File Memory on Exit:</strong> Whenever you close or exit the app, Files+ saves your active directory path, active tab, and currently previewed file. When you reopen the app, you resume right where you left off.</div>
+              </li>
+              <li>
+                <span class="step-num">B</span>
+                <div><strong>Safe Deletion Navigation:</strong> After deleting any single or batch of files, the app remains on the exact same folder/page instead of dropping back to the root directory (<span class="code-pill">/</span>).</div>
+              </li>
+              <li>
+                <span class="step-num">C</span>
+                <div><strong>Storage Fallback Guard:</strong> Navigating up through parent directories stops cleanly at user storage (<span class="code-pill">/storage/emulated/0</span>), preventing empty root folder errors.</div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Deep Dive Features -->
+    <h2 class="section-title" id="deep-search">🔍 Deep Multi-Format Content Search Engine</h2>
+    <div class="cards-grid">
+      <div class="info-box">
+        <h3>📚 Reads Inside Documents</h3>
+        <p>Unlike standard file explorers that only match filenames, Files+ inspects the actual text inside <strong>PDFs, Word (.docx), Excel (.xlsx), CSV, TXT, and vCards (.vcf)</strong>.</p>
+        <span class="code-pill">Apache PDFBox + POI Extractor</span>
+      </div>
+      <div class="info-box">
+        <h3>📞 Smart Phone Number Matching</h3>
+        <p>Search any phone number (e.g. <span class="code-pill">9876543210</span>) and Files+ finds it even if formatted as <span class="code-pill">+91 98765-43210</span> or <span class="code-pill">(987) 654-3210</span>.</p>
+        <span class="code-pill">Normalized Digit Matcher</span>
+      </div>
+      <div class="info-box">
+        <h3>🔔 Non-Blocking Background Scanning</h3>
+        <p>Heavy deep scans run in a foreground service without freezing the UI. A system notification keeps you updated and automatically syncs when the scan finishes.</p>
+        <span class="code-pill">Android Notification Sync</span>
+      </div>
+    </div>
+
+    <!-- Auto-Organizer & Tagging -->
+    <h2 class="section-title" id="auto-organizer">✨ Smart Auto-Organizer & Color Tagging</h2>
+    <div class="cards-grid">
+      <div class="info-box">
+        <h3>🗂️ 1-Tap Category Sorting</h3>
+        <p>Messy <span class="code-pill">Downloads</span> or <span class="code-pill">DCIM</span> folders? One tap automatically categorizes files into <span class="code-pill">/AutoOrganized/</span> subfolders (Images, Documents, Videos, Audio, Sheets, Code, Archives).</p>
+      </div>
+      <div class="info-box">
+        <h3>🏷️ Cross-Folder Tagging</h3>
+        <p>Create custom tags like <span class="code-pill">#Taxes</span>, <span class="code-pill">#Work</span>, or <span class="code-pill">#Receipts</span>. Filter all files on your device with that tag in a single tap, no matter what folder they are in.</p>
+      </div>
+      <div class="info-box">
+        <h3>🛡️ Collision-Proof Safety</h3>
+        <p>Automatically avoids duplicate overwrites (renaming duplicates like <span class="code-pill">receipt_1.pdf</span>) and preserves critical system directories (<span class="code-pill">/Android/data</span>).</p>
+      </div>
+    </div>
+
+    <!-- Feature Comparison Table -->
+    <h2 class="section-title">📊 Why Files+ Stands Out</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Default File Managers</th>
+            <th>Files+ v3.0</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>File Preview</strong></td>
+            <td>Requires launching separate third-party apps</td>
+            <td><strong>Instant Top Preview</strong> for PDFs, media, code, tables, and hex dumps</td>
+          </tr>
+          <tr>
+            <td><strong>Batch Selection</strong></td>
+            <td>Long press with tedious multi-step flow</td>
+            <td><strong>Checkboxes on every item</strong> + Select All + Batch Share & Delete</td>
+          </tr>
+          <tr>
+            <td><strong>App Exit / Reopen</strong></td>
+            <td>Resets back to the home or root folder</td>
+            <td><strong>Full State Memory</strong> (exact folder, preview file, and active tab)</td>
+          </tr>
+          <tr>
+            <td><strong>File Deletion</strong></td>
+            <td>Often resets user back to root directory</td>
+            <td><strong>Safe In-Place Deletion</strong> (remains on current folder view)</td>
+          </tr>
+          <tr>
+            <td><strong>Search Engine</strong></td>
+            <td>Only checks file names</td>
+            <td><strong>Deep Search</strong> inside PDFs, DOCX, XLSX, TXT & phone numbers</td>
+          </tr>
+          <tr>
+            <td><strong>Organization</strong></td>
+            <td>Manual folder creation and file dragging</td>
+            <td><strong>1-Tap Auto-Organizer</strong> into sorted category directories</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 3-Dot Menu Guide -->
+    <h2 class="section-title" id="menu-drawer">📖 Quick Guide: 3-Dot Menu Drawer</h2>
+    <div class="info-box">
+      <p>Tap the <strong>⋮ (3-Dot Menu)</strong> at the top right of the navigation bar to access essential tools:</p>
+      <ul style="padding-left: 20px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.8;">
+        <li><strong>📁 File Explorer:</strong> Switch back to the standard directory browser.</li>
+        <li><strong>🔍 Deep Keyword Search:</strong> Search inside documents and spreadsheets across whole storage.</li>
+        <li><strong>🏷️ Tagged Files:</strong> Browse your color-coded tagged files collection.</li>
+        <li><strong>📊 Storage Partitions Stats:</strong> View used vs free disk space across device partitions.</li>
+        <li><strong>✨ Auto Organize Files:</strong> Open the 1-tap categorization dialog.</li>
+        <li><strong>➕ New Folder / New Text File:</strong> Create directories and files directly.</li>
+        <li><strong>🌙 Dark / Light Theme:</strong> Toggle OLED slate dark mode or bright day mode.</li>
+        <li><strong>🔤 Font Size:</strong> Adjust typography scale from 85% to 150%.</li>
+        <li><strong>📖 How It Works / App Guide:</strong> Open this interactive guide and demonstration page directly inside the app!</li>
+      </ul>
+    </div>
+
+    <footer>
+      <p>Files+ ⚡ Android File Explorer, Deep Document Search & Auto-Organizer</p>
+      <p style="margin-top: 4px;">Version 3.0 • 100% Offline • Built with Jetpack Compose & Material 3</p>
+    </footer>
+
+  </div>
+
+  <!-- Interactive Demo Script -->
+  <script>
+    const previewData = {
+      pdf: {
+        name: "Invoice_Oct2026.pdf",
+        icon: "📄",
+        html: `<div style="font-weight: 700; color: #38bdf8;">INVOICE #INV-2026-904</div>
+               <div>Customer: Acme Global Inc.</div>
+               <div>Phone: +1 (555) 987-6543</div>
+               <div style="color: #34d399; font-weight: 600;">Status: PAID ($1,450.00)</div>`
+      },
+      image: {
+        name: "Site_Inspection.jpg",
+        icon: "🖼️",
+        html: `<div style="font-weight: 700; color: #f43f5e;">Site_Inspection.jpg</div>
+               <div>Resolution: 3840 x 2160 (4K UHD)</div>
+               <div>Camera: Sony IMX989 • ISO 100</div>
+               <div style="color: #cbd5e1;">Location: East Sector Warehouse</div>`
+      },
+      audio: {
+        name: "Meeting_Memo.m4a",
+        icon: "🎵",
+        html: `<div style="font-weight: 700; color: #a855f7;">Meeting_Memo.m4a</div>
+               <div>Duration: 04:32 • 256 kbps AAC</div>
+               <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                 <span style="background:#2563eb; color:white; padding:2px 6px; border-radius:3px; font-size:0.65rem;">▶ Play</span>
+                 <div style="height:4px; flex:1; background:#334155; border-radius:2px;"><div style="width:40%; height:100%; background:#60a5fa; border-radius:2px;"></div></div>
+                 <span style="font-size:0.6rem; color:#94a3b8;">01:48</span>
+               </div>`
+      },
+      code: {
+        name: "Server_Script.py",
+        icon: "💻",
+        html: `<div style="font-weight: 700; color: #f59e0b;">Server_Script.py</div>
+               <div style="font-family: monospace; font-size: 0.65rem; color: #93c5fd; background:#020617; padding:4px; border-radius:4px;">
+                 def sync_database(host, port):<br>
+                 &nbsp;&nbsp;logger.info(f"Connecting {host}:{port}")<br>
+                 &nbsp;&nbsp;return True
+               </div>`
+      },
+      hex: {
+        name: "Firmware_Dump.bin",
+        icon: "🔬",
+        html: `<div style="font-weight: 700; color: #ec4899;">Firmware_Dump.bin (Hex Dump)</div>
+               <div style="font-family: monospace; font-size: 0.62rem; color: #a5f3fc; background:#020617; padding:4px; border-radius:4px;">
+                 00000000: 7F 45 4C 46 02 01 01 00  .ELF....<br>
+                 00000010: 00 00 00 00 00 00 00 00  ........
+               </div>`
+      }
+    };
+
+    function switchPreview(type) {
+      document.querySelectorAll('.preview-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const data = previewData[type];
+      document.getElementById('preview-name').innerText = data.name;
+      document.getElementById('preview-title').querySelector('span:first-child').innerText = data.icon;
+      document.getElementById('preview-content').innerHTML = data.html;
+    }
+
+    function toggleMockItem(element, name, previewType) {
+      const checkbox = element.querySelector('.mock-checkbox');
+      const isChecked = checkbox.classList.toggle('checked');
+      if (isChecked) {
+        checkbox.innerText = '✓';
+        element.classList.add('selected');
+      } else {
+        checkbox.innerText = '';
+        element.classList.remove('selected');
+      }
+
+      // Update selection count
+      const totalSelected = document.querySelectorAll('.mock-file-item.selected').length;
+      document.getElementById('mock-selected-count').innerText = `${totalSelected} File${totalSelected === 1 ? '' : 's'} Selected`;
+
+      // Instant preview continuity
+      if (previewData[previewType]) {
+        const data = previewData[previewType];
+        document.getElementById('preview-name').innerText = name;
+        document.getElementById('preview-title').querySelector('span:first-child').innerText = data.icon;
+        document.getElementById('preview-content').innerHTML = data.html;
+      }
+    }
+
+    function clearMockSelection() {
+      document.querySelectorAll('.mock-file-item').forEach(item => {
+        item.classList.remove('selected');
+        const cb = item.querySelector('.mock-checkbox');
+        cb.classList.remove('checked');
+        cb.innerText = '';
+      });
+      document.getElementById('mock-selected-count').innerText = '0 Files Selected';
+    }
+  </script>
+
+</body>
+</html>
